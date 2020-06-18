@@ -104,7 +104,11 @@ func main() {
 					if strings.Contains(text, "command") {
 						command := strings.Split(text, "command ")
 						imageOptions["Command"] = strings.Replace(strings.Join(command[1:], ""), "\n", "", -1)
+
+						// Left off here, TODO: Add the rest of the Image module options
+					} else if strings.Contains(text, "response") {
 					}
+
 				} else if strings.Contains(text, "exit") {
 					break
 				}
