@@ -21,14 +21,8 @@ func validateOptions(slice []string, val string) bool {
 	return false
 }
 
-type createOptions struct {
-	Command     string
-	Response    string
-	BaseImage   string
-	NewFilename string
-	ClientID    int
-	AlbumID     int
-}
+// Global map for the Image module
+var imageOptions = map[string]string{"Command": "", "Response": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": ""}
 
 func main() {
 	for {
@@ -94,7 +88,6 @@ func main() {
 				fmt.Print("AntiMatter/Image > ")
 				color.Unset()
 				text, _ := reader.ReadString('\n')
-				imageOptions := map[string]string{"Command": "", "Response": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": ""}
 
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println("\n---OPTIONS---")
@@ -111,9 +104,6 @@ func main() {
 					if strings.Contains(text, "command") {
 						command := strings.Split(text, "command ")
 						imageOptions["Command"] = strings.Replace(strings.Join(command[1:], ""), "\n", "", -1)
-						for key, value := range imageOptions {
-							fmt.Println(color.CyanString(key), ":", value)
-						}
 					}
 				} else if strings.Contains(text, "exit") {
 					break
