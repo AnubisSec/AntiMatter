@@ -27,8 +27,8 @@ func validateOptions(slice []string, val string) bool {
 // Global map for the Image module
 var imageOptions = map[string]string{"Command": "", "Response": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": "", "BearerToken": ""}
 
-func createImage(command string, response string, img_path string, img_name string, token string) {
-	inFile, _ := os.Open(img_path)
+func createImage(command string, response string, imgPath string, imgName string, token string) {
+	inFile, _ := os.Open(imgPath)
 	reader := bufio.NewReader(inFile)
 	img, _ := png.Decode(reader)
 
@@ -36,12 +36,12 @@ func createImage(command string, response string, img_path string, img_name stri
 	err := stego.Encode(w, img, []byte(command))
 	if err != nil {
 		fmt.Printf("Error encoding file %v", err)
-		return
 	} else {
-		fmt.Println("[+] Success creating file!")
+		fmt.Println(color.GreenString("[+]"), "Success creating encoded image!")
+
 	}
 
-	outFile, _ := os.Create(img_name)
+	outFile, _ := os.Create(imgName)
 	w.WriteTo(outFile)
 	outFile.Close()
 
@@ -127,7 +127,6 @@ func main() {
 						command := strings.Split(text, "command ")
 						imageOptions["Command"] = strings.Replace(strings.Join(command[1:], ""), "\n", "", -1)
 
-						// Left off here, TODO: Add the rest of the Image module options
 					} else if strings.Contains(text, "response") {
 						if strings.Contains(text, "s") {
 							imageOptions["Response"] = "Short"
@@ -149,11 +148,11 @@ func main() {
 						newFilename := strings.Split(text, "new-filename ")
 						imageOptions["NewFilename"] = strings.Replace(strings.Join(newFilename[1:], ""), "\n", "", -1)
 					} else if strings.Contains(text, "client-id") {
-						clientId := strings.Split(text, "client-id ")
-						imageOptions["ClientId"] = strings.Replace(strings.Join(clientId[1:], ""), "\n", "", -1)
+						clientID := strings.Split(text, "client-id ")
+						imageOptions["ClientId"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
 					} else if strings.Contains(text, "album-id") {
-						albumId := strings.Split(text, "album-id ")
-						imageOptions["AlbumId"] = strings.Replace(strings.Join(albumId[1:], ""), "\n", "", -1)
+						albumID := strings.Split(text, "album-id ")
+						imageOptions["AlbumId"] = strings.Replace(strings.Join(albumID[1:], ""), "\n", "", -1)
 					} else if strings.Contains(text, "bearer-token") {
 						bearerToken := strings.Split(text, "bearer-token ")
 						imageOptions["BearerToken"] = strings.Replace(strings.Join(bearerToken[1:], ""), "\n", "", -1)
