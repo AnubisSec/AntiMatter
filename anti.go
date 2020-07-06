@@ -27,8 +27,9 @@ func validateOptions(slice []string, val string) bool {
 // Global map for the Image module
 var imageOptions = map[string]string{"Command": "", "Response": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": "", "BearerToken": ""}
 
-func createImage(command string, response string, imgPath string, imgName string, token string) {
-	inFile, _ := os.Open(imgPath)
+// createImage is a function that uses the stego lib to encode an image you define and then write it to a new image
+func createImage(command string, response string, origPic string, newPic string, token string) {
+	inFile, _ := os.Open(origPic)
 	reader := bufio.NewReader(inFile)
 	img, _ := png.Decode(reader)
 
@@ -41,12 +42,17 @@ func createImage(command string, response string, imgPath string, imgName string
 
 	}
 
-	outFile, _ := os.Create(imgName)
+	outFile, _ := os.Create(newPic)
 	w.WriteTo(outFile)
 	outFile.Close()
 
 }
 
+func createAlbum(clientToken string, albumTitle string, authType )
+
+// This is a mess, defines way too much. Defines everything needed for the promptui
+// Defines different options to choose for an operator
+// Handles the user defined varibles and stores them in a global map
 func main() {
 	for {
 		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Exit", "Quit"}
@@ -133,9 +139,9 @@ func main() {
 							imageOptions["ClientID"] = ""
 							imageOptions["AlbumID"] = ""
 						}
-						//if strings.Contains(text, "n") {
-						//	imageOptions["Response"] = "No"
-						//	}
+						if strings.Contains(text, "n") {
+							imageOptions["Response"] = "No"
+						}
 						if strings.Contains(text, "l") {
 							imageOptions["Response"] = "Long"
 							imageOptions["BearerToken"] = ""
