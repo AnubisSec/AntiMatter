@@ -3,10 +3,16 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image/png"
+	//"io/ioutil"
+	//"log"
+	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	stego "github.com/auyer/steganography"
@@ -48,14 +54,40 @@ func createImage(command string, response string, origPic string, newPic string,
 
 }
 
-func createAlbum(clientToken string, albumTitle string, authType )
+func createAlbum(title string) {
+
+	apiURL := "https://api.imgur.com"
+	resource := "/3/album/"
+	data := url.Values{}
+	data.Set("title", title)
+
+	u, _ := url.ParseRequestURI(apiURL)
+	u.Path = resource
+	urlStr := u.String() // "https://api.com/user/"
+
+	client := &http.Client{}
+	r, _ := http.NewRequest("POST", urlStr, strings.NewReader(data.Encode())) // URL-encoded payload
+	r.Header.Add("Authorization", "Client-ID fddbefbb9698ad3")
+	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+
+	resp, _ := client.Do(r)
+	var result map[string]interface{}
+
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	nestedMap := result["data"]
+	newMap, _ := nestedMap.(map[string]interface{})
+	fmt.Println(newMap)
+
+}
 
 // This is a mess, defines way too much. Defines everything needed for the promptui
 // Defines different options to choose for an operator
 // Handles the user defined varibles and stores them in a global map
 func main() {
 	for {
-		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Exit", "Quit"}
+		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Exit", "Quit", "testHttp"}
 		validate := func(input string) error {
 			// _, err := strconv.ParseFloat(input, 64)
 			found := validateOptions(options, input)
@@ -173,7 +205,8 @@ func main() {
 
 			}
 		}
-		if strings.EqualFold(result, "") {
+		if strings.EqualFold(result, "testHttp") {
+			createAlbum("test")
 		}
 
 		if strings.EqualFold(result, "") {
