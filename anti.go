@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image/png"
 	//"io/ioutil"
+	//"mime/multipart"
 	//"log"
 	"net/http"
 	"net/url"
@@ -20,6 +21,12 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
+// Album is a type to handle the album creation
+type Album struct {
+	deleteHash string
+	albumID    string
+}
+
 // validateOptions is a function that just helps check to make sure you're choosing a correct option
 func validateOptions(slice []string, val string) bool {
 	for _, item := range slice {
@@ -31,10 +38,13 @@ func validateOptions(slice []string, val string) bool {
 }
 
 // Global map for the Image module
-var imageOptions = map[string]string{"Command": "", "Response": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": "", "BearerToken": ""}
+var imageOptions = map[string]string{"Command": "", "Response": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": ""}
+
+// Global map for the Album module
+var albumOptions = map[string]string{"Title": "", "Client-ID": ""}
 
 // createImage is a function that uses the stego lib to encode an image you define and then write it to a new image
-func createImage(command string, response string, origPic string, newPic string, token string) {
+func createImage(command string, response string, origPic string, newPic string) {
 	inFile, _ := os.Open(origPic)
 	reader := bufio.NewReader(inFile)
 	img, _ := png.Decode(reader)
@@ -54,7 +64,8 @@ func createImage(command string, response string, origPic string, newPic string,
 
 }
 
-func createAlbum(title string) {
+// createAlbum queries the Imgur API in order to create an anonymous album, using a client ID
+func createAlbum(title string, clientID string) (albumID, deleteHash interface{}) {
 
 	apiURL := "https://api.imgur.com"
 	resource := "/3/album/"
@@ -67,7 +78,7 @@ func createAlbum(title string) {
 
 	client := &http.Client{}
 	r, _ := http.NewRequest("POST", urlStr, strings.NewReader(data.Encode())) // URL-encoded payload
-	r.Header.Add("Authorization", "Client-ID fddbefbb9698ad3")
+	r.Header.Add("Authorization", "Client-ID "+clientID)
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
@@ -78,7 +89,14 @@ func createAlbum(title string) {
 
 	nestedMap := result["data"]
 	newMap, _ := nestedMap.(map[string]interface{})
-	fmt.Println(newMap)
+
+	albumID = newMap["id"]
+	deleteHash = newMap["deletehash"]
+
+	fmt.Println(color.GreenString("\n[+]"), "Successfully created an album with the following values:")
+	fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("deletehash:"), deleteHash, "\n")
+
+	return albumID, deleteHash
 
 }
 
@@ -108,7 +126,7 @@ func main() {
 		}
 
 		prompt := promptui.Prompt{
-			Label:     "AnitMatter >",
+			Label:     "AntiMatter >",
 			Templates: templates,
 			Validate:  validate,
 		}
@@ -124,7 +142,8 @@ func main() {
 
 		if strings.EqualFold(result, "options") {
 			fmt.Println("")
-			fmt.Println("Valid Commands:		Description:")
+			fmt.Println("Valid Commands		Description")
+			fmt.Println("---------------         ------------") // Literally just aethetic
 			fmt.Println("\n")
 			fmt.Println(" Image		Create an Image for agent tasking")
 			fmt.Println(" Album		Create an Album for agent responses")
@@ -176,7 +195,6 @@ func main() {
 						}
 						if strings.Contains(text, "l") {
 							imageOptions["Response"] = "Long"
-							imageOptions["BearerToken"] = ""
 							imageOptions["AlbumID"] = ""
 						}
 					} else if strings.Contains(text, "base-image") {
@@ -191,13 +209,10 @@ func main() {
 					} else if strings.Contains(text, "album-id") {
 						albumID := strings.Split(text, "album-id ")
 						imageOptions["AlbumId"] = strings.Replace(strings.Join(albumID[1:], ""), "\n", "", -1)
-					} else if strings.Contains(text, "bearer-token") {
-						bearerToken := strings.Split(text, "bearer-token ")
-						imageOptions["BearerToken"] = strings.Replace(strings.Join(bearerToken[1:], ""), "\n", "", -1)
 					}
 
 				} else if strings.Contains(text, "go") {
-					createImage(imageOptions["Command"], imageOptions["Response"], imageOptions["BaseImage"], imageOptions["NewFilename"], imageOptions["BearerToken"])
+					createImage(imageOptions["Command"], imageOptions["Response"], imageOptions["BaseImage"], imageOptions["NewFilename"])
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -206,10 +221,52 @@ func main() {
 			}
 		}
 		if strings.EqualFold(result, "testHttp") {
-			createAlbum("test")
+			//albumID, deleteHash := createAlbum("test", "bc8c890066d6157")
+			//fmt.Println(color.GreenString("[+]"), "Successfully created an album with the following values:")
+			//fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("deletehash:"), deleteHash)
+
 		}
 
-		if strings.EqualFold(result, "") {
+		if strings.EqualFold(result, "Album") {
+			for {
+				reader := bufio.NewReader(os.Stdin)
+				color.Set(color.FgGreen)
+				fmt.Print("AntiMatter/Album > ")
+				color.Unset()
+				// Had to do this since case sensitivity is dumb in golang
+				initialText, _ := reader.ReadString('\n')
+				text := strings.ToLower(initialText)
+
+				if strings.TrimRight(text, "\n") == "options" {
+					fmt.Println("\n---OPTIONS---")
+					for key, value := range albumOptions {
+						if value == "" {
+
+							fmt.Println(color.CyanString(key), ": None")
+						} else {
+							fmt.Println(color.CyanString(key), ":", value)
+						}
+
+					}
+				} else if strings.Contains(text, "set") {
+					if strings.Contains(text, "title") {
+						title := strings.Split(text, "title ")
+						albumOptions["Title"] = strings.Replace(strings.Join(title[1:], ""), "\n", "", -1)
+
+					} else if strings.Contains(text, "client-id") {
+						clientID := strings.Split(text, "client-id ")
+						albumOptions["Client-ID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
+					}
+
+				} else if strings.Contains(text, "go") {
+					createAlbum(albumOptions["Title"], albumOptions["Client-ID"])
+
+				} else if strings.Contains(text, "exit") {
+					break
+				}
+
+			}
+
 		}
 		if strings.EqualFold(result, "") {
 		}
