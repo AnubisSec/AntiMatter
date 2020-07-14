@@ -49,7 +49,7 @@ var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": ""
 var taskOptions = map[string]string{"TaskingImage": "", "Title": "", "DeleteHash": "", "Description": "", "ClientID": ""}
 
 // Global map for the Response module
-var responseOptions = map[string]string{"Pending-Response": "", "Response-Data": ""}
+var responseOptions = map[string]string{"AlbumID": "", "ClientID": ""}
 
 // Global multimap for holding several different types of variables returned from the imgur API
 var imgurItems = slicemultimap.New() // empty
@@ -156,7 +156,7 @@ func uploadImage(imageFile string, title string, album string, description strin
 
 }
 
-func getAlbumImages(albumID string, clientID string) (description, link interface{}) {
+func getAlbumImages(albumID string, clientID string) {
 	// This hash is the albumID hash
 	url := "https://api.imgur.com/3/album/" + albumID + "/images"
 	method := "GET"
@@ -178,17 +178,19 @@ func getAlbumImages(albumID string, clientID string) (description, link interfac
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
-	var result map[string]interface{}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
 
-	json.NewDecoder(res.Body).Decode(&result)
+	//var result map[string]interface{}
 
-	nestedMap := result["data"]
-	newMap, _ := nestedMap.(map[string]interface{})
+	//json.NewDecoder(res.Body).Decode(&result)
 
-	description = newMap["description"]
-	link = newMap["link"]
+	//nestedMap := result["data"]
+	//newMap, _ := nestedMap.(map[string]interface{})
 
-	return description, link
+	fmt.Println(string(body))
+
+	//return description, link
 
 }
 
@@ -369,6 +371,8 @@ func main() {
 					albumOptions["AlbumID"] = albumID.(string)
 					albumOptions["Delete-Hash"] = deletehash.(string)
 
+					// Here ask the user if they want to upload the previously created image to this new album
+
 				} else if strings.Contains(text, "exit") {
 					break
 				}
@@ -506,6 +510,14 @@ func main() {
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println("\n---OPTIONS---")
 
+					if val, ok := albumOptions["AlbumID"]; ok {
+						responseOptions["AlbumID"] = val
+					}
+					if val, ok := albumOptions["Client-ID"]; ok {
+						responseOptions["ClientID"] = val
+
+					}
+
 					for key, value := range responseOptions {
 						if value == "" {
 
@@ -517,13 +529,13 @@ func main() {
 					}
 					fmt.Println("\n")
 
-					//	} //else if strings.Contains(text, "check") {
-					//albumID := albumOptions["AlbumID"]
-					//clientID := albumOptions["Client-ID"]
-					// Check to see if albumID has been set yet
-					//if albumID == "" {
-					//		fmt.Println("Error: There is no album ID to search")
-					//}
+				} else if strings.Contains(text, "check") {
+					albumID := responseOptions["AlbumID"]
+					clientID := responseOptions["ClientID"]
+					getAlbumImages(albumID, clientID)
+
+					//fmt.Println("[+] Description:", description)
+					//fmt.Println("[+] Link:", link)
 
 				} else if strings.Contains(text, "exit") {
 					break
