@@ -46,7 +46,10 @@ var imageOptions = map[string]string{"Command": "", "BaseImage": "", "NewFilenam
 var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": "", "Delete-Hash": ""}
 
 // Global map for the Task module
-var taskOptions = map[string]string{"TaskingImage": "", "Title": "", "Description": "", "ClientID": ""}
+var taskOptions = map[string]string{"TaskingImage": "", "Title": "", "DeleteHash": "", "Description": "", "ClientID": ""}
+
+// Global map for the Response module
+var responseOptions = map[string]string{"Pending-Response": "", "Response-Data": ""}
 
 // Global multimap for holding several different types of variables returned from the imgur API
 var imgurItems = slicemultimap.New() // empty
@@ -102,16 +105,16 @@ func createAlbum(title string, clientID string) (albumID, deleteHash interface{}
 	deleteHash = newMap["deletehash"]
 
 	fmt.Println(color.GreenString("\n[+]"), "Successfully created an album with the following values:")
-	fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("deletehash:"), deleteHash, "\n")
+	fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("Album DeleteHash:"), deleteHash, "\n")
 
 	return albumID, deleteHash
 
 }
 
-func uploadImage(imageFile string, title string, description string, clientID string) (imageID, deleteHash interface{}) {
+func uploadImage(imageFile string, title string, album string, description string, clientID string) (imageID, deleteHash interface{}) {
 	url := "https://api.imgur.com/3/image"
 	method := "POST"
-	var params = map[string]string{"image": imageFile, "title": title, "description": description}
+	var params = map[string]string{"image": imageFile, "title": title, "album": album, "description": description}
 
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
@@ -147,9 +150,45 @@ func uploadImage(imageFile string, title string, description string, clientID st
 	deleteHash = newMap["deletehash"]
 
 	fmt.Println(color.GreenString("[+] Tasking upload success!"))
-	fmt.Println(color.GreenString("\nImage ID is:"), imageID, "|", color.GreenString("Delete Hash is:"), deleteHash, "\n")
+	fmt.Println(color.GreenString("\nTask Image ID is:"), imageID, "|", color.GreenString("Task Image DeleteHash is:"), deleteHash, "\n")
 
 	return imageID, deleteHash
+
+}
+
+func getAlbumImages(albumID string, clientID string) (description, link interface{}) {
+	// This hash is the albumID hash
+	url := "https://api.imgur.com/3/album/" + albumID + "/images"
+	method := "GET"
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	err := writer.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	req.Header.Add("Authorization", "Client-ID "+clientID)
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	res, err := client.Do(req)
+	var result map[string]interface{}
+
+	json.NewDecoder(res.Body).Decode(&result)
+
+	nestedMap := result["data"]
+	newMap, _ := nestedMap.(map[string]interface{})
+
+	description = newMap["description"]
+	link = newMap["link"]
+
+	return description, link
 
 }
 
@@ -202,6 +241,7 @@ func main() {
 			fmt.Println(" Album		Create an Album for agent responses")
 			fmt.Println(" Task		Create Tasking for agent")
 			fmt.Println(" List		List images, albums, agents, and tasks")
+			fmt.Println(" Response	Search for any pending responses within an album")
 			fmt.Println(" Options	List out different options/modules you can choose from")
 			fmt.Println(" Exit		Exit program")
 			fmt.Println("")
@@ -222,11 +262,11 @@ func main() {
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println("\n---OPTIONS---")
 					// Check to see if this value is set from the Album module
-					if val, ok := albumOptions["Client-ID"]; ok {
-						imageOptions["ClientId"] = val
-					}
+					//if val, ok := albumOptions["Client-ID"]; ok {
+					//		imageOptions["ClientID"] = val
+					//	}
 					if val, ok := albumOptions["AlbumID"]; ok {
-						imageOptions["AlbumId"] = val
+						imageOptions["AlbumID"] = val
 					}
 					for key, value := range imageOptions {
 						if value == "" {
@@ -251,10 +291,10 @@ func main() {
 						imageOptions["NewFilename"] = strings.Replace(strings.Join(newFilename[1:], ""), "\n", "", -1)
 					} else if strings.Contains(text, "client-id") {
 						clientID := strings.Split(text, "client-id ")
-						imageOptions["ClientId"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
+						imageOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
 					} else if strings.Contains(text, "album-id") {
 						albumID := strings.Split(text, "album-id ")
-						imageOptions["AlbumId"] = strings.Replace(strings.Join(albumID[1:], ""), "\n", "", -1)
+						imageOptions["AlbumID"] = strings.Replace(strings.Join(albumID[1:], ""), "\n", "", -1)
 					}
 
 				} else if strings.Contains(text, "go") {
@@ -294,6 +334,10 @@ func main() {
 					// Check to see if this value was set in the Image module
 					if val, ok := imageOptions["AlbumId"]; ok {
 						albumOptions["AlbumID"] = val
+					}
+					// Check to see if this value was set in the Image module
+					if val, ok := imageOptions["ClientID"]; ok {
+						albumOptions["Client-ID"] = val
 					}
 
 					for key, value := range albumOptions {
@@ -346,8 +390,12 @@ func main() {
 					fmt.Println("\n---OPTIONS---")
 
 					// Check to see if this value was set in the Image module
-					if val, ok := imageOptions["ClientId"]; ok {
+					if val, ok := imageOptions["ClientID"]; ok {
 						taskOptions["ClientID"] = val
+					}
+					// Check to see if this value was set in the Album module (it should have been, add error handling if not)
+					if val, ok := albumOptions["Delete-Hash"]; ok {
+						taskOptions["DeleteHash"] = val
 					}
 
 					for key, value := range taskOptions {
@@ -380,6 +428,10 @@ func main() {
 						encoded := base64.StdEncoding.EncodeToString(content)
 						taskOptions["TaskingImage"] = encoded
 
+					} else if strings.Contains(text, "delete-hash") {
+						deleteHash := strings.Split(text, "delete-hash ")
+						taskOptions["DeleteHash"] = strings.Replace(strings.Join(deleteHash[1:], ""), "\n", "", -1)
+
 					} else if strings.Contains(text, "description") {
 						taskDescrip := strings.Split(text, "description ")
 						taskOptions["Description"] = strings.Replace(strings.Join(taskDescrip[1:], ""), "\n", "", -1)
@@ -391,7 +443,7 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "go") {
-					imageID, deletehash := uploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["Description"], taskOptions["ClientID"])
+					imageID, deletehash := uploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
 
 					imgurItems.Put("ImageID", imageID)
 					imgurItems.Put("AlbumDeleteHash", deletehash)
@@ -427,8 +479,58 @@ func main() {
 			}
 
 		}
-		if strings.EqualFold(result, "") {
+		/*
+		 My thought right now is that this will look for any descriptions that mention the word "response"
+		 For right now, and then maybe get a big dict of words that will mean specific things
+
+		 Beta build:
+		 1. Search albumOptions["AlbumID"] using API for images
+		 2. Search through their descriptions to see if any say "response" in them
+		 3. If they do, pull the link from the data and grab that image and decode it
+		 4. Store the decoded info into resonseOptions["Response-Data"]
+		 5. Give to user
+
+
+
+		*/
+		if strings.EqualFold(result, "Response") {
+			for {
+				reader := bufio.NewReader(os.Stdin)
+				color.Set(color.FgGreen)
+				fmt.Print("AntiMatter/Response > ")
+				color.Unset()
+				// Had to do this since case sensitivity is dumb in golang
+				initialText, _ := reader.ReadString('\n')
+				text := strings.ToLower(initialText)
+
+				if strings.TrimRight(text, "\n") == "options" {
+					fmt.Println("\n---OPTIONS---")
+
+					for key, value := range responseOptions {
+						if value == "" {
+
+							fmt.Println(color.CyanString(key), ": None")
+						} else {
+							fmt.Println(color.CyanString(key), ":", value)
+						}
+
+					}
+					fmt.Println("\n")
+
+					//	} //else if strings.Contains(text, "check") {
+					//albumID := albumOptions["AlbumID"]
+					//clientID := albumOptions["Client-ID"]
+					// Check to see if albumID has been set yet
+					//if albumID == "" {
+					//		fmt.Println("Error: There is no album ID to search")
+					//}
+
+				} else if strings.Contains(text, "exit") {
+					break
+				}
+			}
 		}
+
 		if strings.EqualFold(result, "") {
 		}
 		if strings.EqualFold(result, "") {
