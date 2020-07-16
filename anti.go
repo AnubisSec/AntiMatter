@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"image/png"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -43,7 +44,7 @@ func validateOptions(slice []string, val string) bool {
 var imageOptions = map[string]string{"Command": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": ""}
 
 // Global map for the Album module
-var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": "", "Delete-Hash": ""}
+var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": "", "Album Delete-Hash": ""}
 
 // Global map for the Task module
 var taskOptions = map[string]string{"TaskingImage": "", "Title": "", "DeleteHash": "", "Description": "", "ClientID": ""}
@@ -156,7 +157,42 @@ func uploadImage(imageFile string, title string, album string, description strin
 
 }
 
-func getAlbumImages(albumID string, clientID string) {
+func addImage(albumDeleteHash string, clientID string, imgDeleteHash string) (success, status interface{}) {
+	// THis hash is the album deleteHash
+	url := "https://api.imgur.com/3/album/" + albumDeleteHash
+	method := "POST"
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	// This hash is the image deleteHash
+	_ = writer.WriteField("deletehashes[]", imgDeleteHash)
+	err := writer.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	req.Header.Add("Authorization", "Client-ID "+clientID)
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	res, err := client.Do(req)
+	var result map[string]interface{}
+
+	json.NewDecoder(res.Body).Decode(&result)
+
+	success = result["success"]
+	status = result["status"]
+
+	return success, status
+
+}
+
+func getAlbumImages(albumID string, clientID string) (description, link interface{}) {
 	// This hash is the albumID hash
 	url := "https://api.imgur.com/3/album/" + albumID + "/images"
 	method := "GET"
@@ -178,20 +214,32 @@ func getAlbumImages(albumID string, clientID string) {
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	var result map[string]interface{}
 
-	//var result map[string]interface{}
+	json.NewDecoder(res.Body).Decode(&result)
 
-	//json.NewDecoder(res.Body).Decode(&result)
+	nestedMap := result["data"]
+	newMap, _ := nestedMap.(map[string]interface{})
 
-	//nestedMap := result["data"]
-	//newMap, _ := nestedMap.(map[string]interface{})
+	// Left off here, this is really tripping me up, keep testing in the local get_album_images.go testbed
+	description = newMap["description"]
+	link = newMap["link"]
 
-	fmt.Println(string(body))
+	return description, link
 
-	//return description, link
+}
 
+// yesNo() is just a function that helps ask the user yes or no lmao
+func yesNo() bool {
+	prompt := promptui.Select{
+		Label: "Would you like to upload most recently created image to this album?[Yes/No]",
+		Items: []string{"Yes", "No"},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		log.Fatalf("Prompt failed %v\n", err)
+	}
+	return result == "Yes"
 }
 
 // This is a mess, defines way too much. Defines everything needed for the promptui
@@ -369,9 +417,7 @@ func main() {
 				} else if strings.Contains(text, "go") {
 					albumID, deletehash := createAlbum(albumOptions["Title"], albumOptions["Client-ID"])
 					albumOptions["AlbumID"] = albumID.(string)
-					albumOptions["Delete-Hash"] = deletehash.(string)
-
-					// Here ask the user if they want to upload the previously created image to this new album
+					albumOptions["Album Delete-Hash"] = deletehash.(string)
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -450,7 +496,15 @@ func main() {
 					imageID, deletehash := uploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
 
 					imgurItems.Put("ImageID", imageID)
-					imgurItems.Put("AlbumDeleteHash", deletehash)
+					imgurItems.Put("ImageDeleteHash", deletehash)
+
+					// Here ask the user if they want to upload the previously created image to this new album
+
+					confirmAdd := yesNo()
+					if confirmAdd {
+						success, status := addImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
+						fmt.Println(success, "|", status)
+					}
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -472,7 +526,7 @@ func main() {
 					// Check the lengths to appropriately label values
 					for _, items := range tmp {
 						if len(items) == 15 {
-							fmt.Println(color.GreenString("Delete Hash is:"), items, "\n")
+							fmt.Println(color.GreenString("Image Delete Hash is:"), items, "\n")
 						} else if len(items) == 7 {
 							fmt.Println(color.GreenString("\nImage ID is:"), items)
 						}
@@ -532,10 +586,10 @@ func main() {
 				} else if strings.Contains(text, "check") {
 					albumID := responseOptions["AlbumID"]
 					clientID := responseOptions["ClientID"]
-					getAlbumImages(albumID, clientID)
+					description, link := getAlbumImages(albumID, clientID)
 
-					//fmt.Println("[+] Description:", description)
-					//fmt.Println("[+] Link:", link)
+					fmt.Println("[+] Description:", description)
+					fmt.Println("[+] Link:", link)
 
 				} else if strings.Contains(text, "exit") {
 					break
