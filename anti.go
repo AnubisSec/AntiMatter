@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"image/png"
+	"io"
 	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,10 +26,20 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
+/*
 // Album is a type to handle the album creation
 type Album struct {
 	deleteHash string
 	albumID    string
+}
+*/
+
+// AlbumImages is a struct to hold the relevant image info after uploading to an album
+type AlbumImages struct {
+	ImageID     string `json:"id"`
+	ImageTitle  string `json:"title"`
+	Description string `json:"description"`
+	ImageLink   string `json:"link"`
 }
 
 // validateOptions is a function that just helps check to make sure you're choosing a correct option
@@ -192,7 +204,7 @@ func addImage(albumDeleteHash string, clientID string, imgDeleteHash string) (su
 
 }
 
-func getAlbumImages(albumID string, clientID string) (description, link interface{}) {
+func getAlbumImages(albumID string, clientID string) (imageLink interface{}) {
 	// This hash is the albumID hash
 	url := "https://api.imgur.com/3/album/" + albumID + "/images"
 	method := "GET"
@@ -214,18 +226,28 @@ func getAlbumImages(albumID string, clientID string) (description, link interfac
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
-	var result map[string]interface{}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
 
-	json.NewDecoder(res.Body).Decode(&result)
+	stripResponse := strings.NewReplacer(`{"data":[`, "", "]", "", ":[", ":0", `"}`, `"`, `\`, "")
+	//Init the AlbumImages struct
+	content := AlbumImages{}
 
-	nestedMap := result["data"]
-	newMap, _ := nestedMap.(map[string]interface{})
+	newResponse := stripResponse.Replace(string(body))
 
-	// Left off here, this is really tripping me up, keep testing in the local get_album_images.go testbed
-	description = newMap["description"]
-	link = newMap["link"]
+	json.Unmarshal([]byte(newResponse), &content)
 
-	return description, link
+	v := reflect.ValueOf(content)
+	typeOfS := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		fmt.Printf("[+] %s: %v\n", typeOfS.Field(i).Name, v.Field(i).Interface())
+	}
+
+	link := v.Field(3).Interface()
+	//fmt.Printf("%+v\n", content)
+
+	return link
 
 }
 
@@ -240,6 +262,31 @@ func yesNo() bool {
 		log.Fatalf("Prompt failed %v\n", err)
 	}
 	return result == "Yes"
+}
+
+func getImage() bool {
+	prompt := promptui.Select{
+		Label: "Would you like to upload most recently created image to this album?[Yes/No]",
+		Items: []string{"Yes", "No"},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		log.Fatalf("Prompt failed %v\n", err)
+	}
+	return result == "Yes"
+}
+
+func decodeImage() {
+	inFile, _ := os.Open("cool.png")
+	defer inFile.Close()
+
+	reader := bufio.NewReader(inFile)
+	img, _ := png.Decode(reader)
+
+	sizeOfMessage := stego.GetMessageSizeFromImage(img)
+
+	msg := stego.Decode(sizeOfMessage, img)
+	fmt.Println(string(msg))
 }
 
 // This is a mess, defines way too much. Defines everything needed for the promptui
@@ -375,20 +422,23 @@ func main() {
 				initialText, _ := reader.ReadString('\n')
 				text := strings.ToLower(initialText)
 
+				// Check to see if this value was set in the Image module
+				if val, ok := imageOptions["ClientId"]; ok {
+					albumOptions["Client-ID"] = val
+				}
+
+				// Check to see if this value was set in the Image module
+				if val, ok := imageOptions["AlbumId"]; ok {
+					albumOptions["AlbumID"] = val
+				}
+
+				// Check to see if this value was set in the Image module
+				if val, ok := imageOptions["ClientID"]; ok {
+					albumOptions["Client-ID"] = val
+				}
+
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println("\n---OPTIONS---")
-					// Check to see if this value was set in the Image module
-					if val, ok := imageOptions["ClientId"]; ok {
-						albumOptions["Client-ID"] = val
-					}
-					// Check to see if this value was set in the Image module
-					if val, ok := imageOptions["AlbumId"]; ok {
-						albumOptions["AlbumID"] = val
-					}
-					// Check to see if this value was set in the Image module
-					if val, ok := imageOptions["ClientID"]; ok {
-						albumOptions["Client-ID"] = val
-					}
 
 					for key, value := range albumOptions {
 						if value == "" {
@@ -502,9 +552,10 @@ func main() {
 
 					confirmAdd := yesNo()
 					if confirmAdd {
-						success, status := addImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
-						fmt.Println(success, "|", status)
+						addImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
+						fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
 					}
+					//fmt.Println(success, "|", status)
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -561,16 +612,17 @@ func main() {
 				initialText, _ := reader.ReadString('\n')
 				text := strings.ToLower(initialText)
 
+				if val, ok := albumOptions["AlbumID"]; ok {
+					responseOptions["AlbumID"] = val
+				}
+
+				if val, ok := albumOptions["Client-ID"]; ok {
+					responseOptions["ClientID"] = val
+
+				}
+
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println("\n---OPTIONS---")
-
-					if val, ok := albumOptions["AlbumID"]; ok {
-						responseOptions["AlbumID"] = val
-					}
-					if val, ok := albumOptions["Client-ID"]; ok {
-						responseOptions["ClientID"] = val
-
-					}
 
 					for key, value := range responseOptions {
 						if value == "" {
@@ -586,10 +638,31 @@ func main() {
 				} else if strings.Contains(text, "check") {
 					albumID := responseOptions["AlbumID"]
 					clientID := responseOptions["ClientID"]
-					description, link := getAlbumImages(albumID, clientID)
 
-					fmt.Println("[+] Description:", description)
-					fmt.Println("[+] Link:", link)
+					linkImage := getAlbumImages(albumID, clientID)
+
+					response, e := http.Get(linkImage.(string))
+					if e != nil {
+						log.Fatal(e)
+					}
+					defer response.Body.Close()
+
+					//open a file for writing
+					file, err := os.Create("/tmp/asdf.jpg")
+					if err != nil {
+						log.Fatal(err)
+					}
+					defer file.Close()
+
+					// Use io.Copy to just dump the response body to the file. This supports huge files
+					_, err = io.Copy(file, response.Body)
+					if err != nil {
+						log.Fatal(err)
+					}
+					fmt.Println("Get response: Success!\n")
+					fmt.Println("Response:\n")
+
+					decodeImage()
 
 				} else if strings.Contains(text, "exit") {
 					break
