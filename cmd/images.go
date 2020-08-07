@@ -131,6 +131,7 @@ func GetImage() bool {
 
 // DecodeImage is a test function to decode stego
 func DecodeImage() {
+	// If this image doesn't exist it will break
 	inFile, _ := os.Open("/tmp/asdf.jpg")
 	defer inFile.Close()
 

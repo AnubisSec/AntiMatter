@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/AntiMatter/cmd"
+	"github.com/AntiMatter/internal"
 	"github.com/fatih/color"
 	"github.com/jwangsadinata/go-multimap/slicemultimap"
 	"github.com/manifoldco/promptui"
@@ -171,6 +172,7 @@ func main() {
 
 				} else if strings.Contains(text, "go") {
 					cmd.CreateImage(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
+					internal.InsertImages(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
 
 				} else if strings.Contains(text, "exit") {
 					break
