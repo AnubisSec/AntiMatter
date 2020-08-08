@@ -1,9 +1,11 @@
 // TODO:
-// Error handling
-// Display walkthroughs for each module
-// Set up mysql and configure it for multiple agent handlings
-// Fix some of the verbiage on the modules so that it makes a bit more sense
-// Maybe some autocomplete and up arrow stuff
+// Error handling []
+// Display walkthroughs for each module []
+// Set up mysql and configure it for multiple agent handlings []
+// Error handling for existing tables and what not []
+// Fix some of the verbiage on the modules so that it makes a bit more sense []
+// Maybe some autocomplete and up arrow stuff []
+// Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
 
 package main
 
@@ -44,7 +46,7 @@ var imageOptions = map[string]string{"Command": "", "BaseImage": "", "NewFilenam
 var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": "", "Album Delete-Hash": ""}
 
 // Global map for the Task module
-var taskOptions = map[string]string{"TaskingImage": "", "Title": "", "DeleteHash": "", "Description": "", "ClientID": ""}
+var taskOptions = map[string]string{"TaskingImageRaw": "", "TaskingImage": "", "Title": "", "DeleteHash": "", "Description": "", "ClientID": ""}
 
 // Global map for the Response module
 var responseOptions = map[string]string{"AlbumID": "", "ClientID": ""}
@@ -145,7 +147,7 @@ func main() {
 						}
 
 					}
-					fmt.Println("\n")
+					fmt.Println(" ")
 				} else if strings.Contains(text, "set") {
 
 					// TODO: If this isn't set it breaks, handle that
@@ -172,6 +174,7 @@ func main() {
 
 				} else if strings.Contains(text, "go") {
 					cmd.CreateImage(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
+					// Utilizes the mysql stuff, currently have it set up on a Docker test server
 					internal.InsertImages(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
 
 				} else if strings.Contains(text, "exit") {
@@ -219,7 +222,7 @@ func main() {
 
 					}
 
-					fmt.Println("\n")
+					fmt.Println(" ")
 				} else if strings.Contains(text, "set") {
 					if strings.Contains(text, "title") {
 						title := strings.Split(text, "title ")
@@ -231,12 +234,14 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "list") {
-					fmt.Println(color.CyanString("AlbumHash:"), albumOptions["Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"])
+					fmt.Println(color.CyanString("AlbumHash:"), albumOptions["Album Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"])
 
 				} else if strings.Contains(text, "go") {
 					albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], albumOptions["Client-ID"])
 					albumOptions["AlbumID"] = albumID.(string)
 					albumOptions["Album Delete-Hash"] = deletehash.(string)
+					// Utilizes the mysql stuff, currently have it set up on a Docker test server
+					internal.InsertAlbum(albumOptions["Title"], albumOptions["AlbumID"], albumOptions["Album Delete-Hash"])
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -276,7 +281,7 @@ func main() {
 						}
 
 					}
-					fmt.Println("\n")
+					fmt.Println(" ")
 				} else if strings.Contains(text, "set") {
 					if strings.Contains(text, "title") {
 						taskTitle := strings.Split(text, "title ")
@@ -285,6 +290,7 @@ func main() {
 					} else if strings.Contains(text, "tasking-image") {
 
 						taskImage := strings.Split(text, "tasking-image ")
+						taskOptions["TaskingImageRaw"] = strings.Replace(strings.Join(taskImage[1:], ""), "\n", "", -1)
 
 						// Open local image file
 						f, _ := os.Open("./" + strings.Replace(strings.Join(taskImage[1:], ""), "\n", "", -1))
@@ -321,6 +327,7 @@ func main() {
 					if confirmAdd {
 						cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
 						fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
+						internal.InsertTask(taskOptions["TaskingImageRaw"], taskOptions["Title"], taskOptions["Description"], imageID.(string), deletehash.(string))
 					}
 					//fmt.Println(success, "|", status)
 
@@ -344,9 +351,9 @@ func main() {
 					// Check the lengths to appropriately label values
 					for _, items := range tmp {
 						if len(items) == 15 {
-							fmt.Println("\n\n", color.GreenString("Image Delete Hash is:"), items)
+							fmt.Println(color.GreenString("[+] Image Delete Hash is:"), items)
 						} else if len(items) == 7 {
-							fmt.Println(color.GreenString("Image ID is:"), items, "\n\n")
+							fmt.Println(color.GreenString("[+] Image ID is:"), items)
 						}
 					}
 
@@ -427,10 +434,15 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					fmt.Println("Get response: Success!\n")
-					fmt.Println(color.GreenString("Response") + ":\n")
+					fmt.Println("Get response: Success!")
+					fmt.Println(" ")
+
+					fmt.Println(color.GreenString("Response") + ":")
+					fmt.Println(" ")
 
 					cmd.DecodeImage()
+
+					fmt.Println(" ")
 
 				} else if strings.Contains(text, "exit") {
 					break

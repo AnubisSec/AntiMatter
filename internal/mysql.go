@@ -114,5 +114,59 @@ func InsertImages(command, baseimage, newfilename string) {
 	defer insert.Close()
 
 	insert.Exec(command, baseimage, newfilename)
-	fmt.Println("[+] Finally it worked...")
+}
+
+// InsertAlbum is a function that will insert the data from the album module into the database
+func InsertAlbum(title, albumid, deletehash string) {
+
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("[+] Connected successfully")
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] DB selected successfully")
+	}
+
+	insert, err := Db.Prepare("INSERT INTO Albums (title, AlbumID, DeleteHash) VALUES ( ?, ?, ? )")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer insert.Close()
+
+	insert.Exec(title, albumid, deletehash)
+}
+
+// InsertTask is a function that will insert the data from the task module into the database
+func InsertTask(taskingimage, title, description, imageID, deleteHash string) {
+
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("[+] Connected successfully")
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] DB selected successfully")
+	}
+
+	insert, err := Db.Prepare("INSERT INTO Tasking (Tasking_Image, Title, Description, Image_Hash, Delete_Hash) VALUES ( ?, ?, ?, ?, ? )")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer insert.Close()
+
+	insert.Exec(taskingimage, title, description, imageID, deleteHash)
+
 }

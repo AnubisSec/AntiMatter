@@ -17,6 +17,7 @@ import (
 )
 
 // CreateImage is a function that uses the stego lib to encode an image you define and then write it to a new image
+// if the original pic doesn't exist this will break...hard
 func CreateImage(command string, origPic string, newPic string) {
 	inFile, _ := os.Open(origPic)
 	reader := bufio.NewReader(inFile)
