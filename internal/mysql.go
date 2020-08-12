@@ -9,6 +9,8 @@ import (
 
 	// Need this grab side effects to use sql
 	_ "github.com/go-sql-driver/mysql"
+
+	"github.com/fatih/color"
 )
 
 // Db is the exported variable for the connection of the database
@@ -54,6 +56,7 @@ func init() {
 	defer stmtPic.Close()
 
 	_, err = stmtPic.Exec()
+	fmt.Println("[+] Succesfully created Pictures table")
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Pictures table already exists, skipping...")
 	}
@@ -65,9 +68,10 @@ func init() {
 	// Albums table
 	stmtAlbum, err := Db.Prepare("CREATE TABLE Albums (ID INT AUTO_INCREMENT PRIMARY KEY, Album_Hash VARCHAR(255), Delete_Hash VARCHAR(255), Auth_Type VARCHAR(255), Token VARCHAR(255));")
 	if err != nil {
-		fmt.Println("Skipping...")
+		fmt.Println(err)
 	}
 	_, err = stmtAlbum.Exec()
+	fmt.Println("[+] Succesfully created Albums table")
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Albums table already exists, skipping...")
 	}
@@ -79,9 +83,10 @@ func init() {
 	// Tasking table
 	stmtTask, err := Db.Prepare("CREATE TABLE Tasking (Tasking_Image VARCHAR(255), Tasking_Command VARCHAR(255), Response TEXT, Title VARCHAR(255), Tags VARCHAR(255), Agent VARCHAR(255), Image_Hash VARCHAR(255), Delete_Hash VARCHAR(255), Token VARCHAR(255));")
 	if err != nil {
-		fmt.Println("Skipping...")
+		fmt.Println(err)
 	}
 	_, err = stmtTask.Exec()
+	fmt.Println("[+] Succesfully created Tasking table")
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Tasking table already exists, skipping...")
 	}
@@ -93,9 +98,10 @@ func init() {
 	// Agent table
 	stmtAgent, err := Db.Prepare("CREATE TABLE Agents (ID INT AUTO_INCREMENT PRIMARY KEY, Status VARCHAR(255), Title VARCHAR(255), Tags VARCHAR(255));")
 	if err != nil {
-		fmt.Println("Skipping...")
+		fmt.Println(err)
 	}
 	_, err = stmtAgent.Exec()
+	fmt.Println("[+] Succesfully created Agent table")
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Agents table already exists, skipping...")
 	}
@@ -173,5 +179,86 @@ func InsertTask(taskingimage, title, description, imageID, deleteHash string) {
 	defer insert.Close()
 
 	insert.Exec(taskingimage, title, description, imageID, deleteHash)
+
+}
+
+// GetImages is a function that will query the database for the current images that are encoded
+func GetImages() {
+
+	var (
+		id          int
+		newFilename string
+		command     string
+	)
+
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	rows, err := Db.Query("SELECT ID, new_filename, command FROM Pictures")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&id, &newFilename, &command)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		fmt.Println("|", color.GreenString("ID:"), id, "|", color.GreenString("File Name:"), newFilename, "|", color.GreenString("Encoded Command:"), command, "|")
+	}
+	err = rows.Err()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+// GetAlbums is a function that will query the database for the current albums that have been created
+func GetAlbums() {
+
+	var (
+		id        int
+		title     string
+		albumID   string
+		albumHash string
+	)
+
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	rows, err := Db.Query("SELECT ID, title, AlbumID, DeleteHash FROM Albums")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&id, &title, &albumID, &albumHash)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("|", color.GreenString("ID:"), id, "|", color.GreenString("Album Title:"), title, "|", color.GreenString("Album ID:"), albumID, "|", color.GreenString("Album Delete Hash:"), albumHash, "|")
+
+	}
+	err = rows.Err()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 }

