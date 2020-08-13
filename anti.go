@@ -41,8 +41,11 @@ import (
 	"sort"
 	"strings"
 
+	// Internal libs
 	"github.com/AntiMatter/cmd"
 	"github.com/AntiMatter/internal"
+
+	// External libs
 	"github.com/fatih/color"
 	"github.com/jwangsadinata/go-multimap/slicemultimap"
 	"github.com/manifoldco/promptui"
@@ -136,7 +139,7 @@ func main() {
 			fmt.Println(" Options	List out different options/modules you can choose from")
 			//	fmt.Println(" Init		Have the server walk you through filling in the options you need")
 			fmt.Println(" Exit		Exit program")
-			fmt.Println("")
+			fmt.Println(" ")
 			fmt.Println(color.YellowString("[ The order these should be run in ] "))
 			fmt.Println(" ")
 			fmt.Println("1. Image\n2. Album\n3. Task\n4. Response")
