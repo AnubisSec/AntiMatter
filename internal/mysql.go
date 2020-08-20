@@ -56,9 +56,11 @@ func init() {
 	defer stmtPic.Close()
 
 	_, err = stmtPic.Exec()
-	fmt.Println("[+] Succesfully created Pictures table")
+
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Pictures table already exists, skipping...")
+	} else {
+		fmt.Println("[+] Succesfully created Pictures table")
 	}
 	// **************************************************************************************************************************************************************************************************************************************
 
@@ -71,9 +73,11 @@ func init() {
 		fmt.Println(err)
 	}
 	_, err = stmtAlbum.Exec()
-	fmt.Println("[+] Succesfully created Albums table")
+
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Albums table already exists, skipping...")
+	} else {
+		fmt.Println("[+] Succesfully created Albums table")
 	}
 	// **************************************************************************************************************************************************************************************************************************************
 
@@ -81,14 +85,16 @@ func init() {
 
 	// **************************************************************************************************************************************************************************************************************************************
 	// Tasking table
-	stmtTask, err := Db.Prepare("CREATE TABLE Tasking (Tasking_Image VARCHAR(255), Tasking_Command VARCHAR(255), Response TEXT, Title VARCHAR(255), Tags VARCHAR(255), Agent VARCHAR(255), Image_Hash VARCHAR(255), Delete_Hash VARCHAR(255), Token VARCHAR(255));")
+	stmtTask, err := Db.Prepare("CREATE TABLE Tasking (Tasking_Image VARCHAR(255), Tasking_Command VARCHAR(255), Response TEXT, Title VARCHAR(255), Tags VARCHAR(255), Agent VARCHAR(255), Image_Hash VARCHAR(255), Delete_Hash VARCHAR(255));")
 	if err != nil {
 		fmt.Println(err)
 	}
 	_, err = stmtTask.Exec()
-	fmt.Println("[+] Succesfully created Tasking table")
+
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Tasking table already exists, skipping...")
+	} else {
+		fmt.Println("[+] Succesfully created Tasking table")
 	}
 	// **************************************************************************************************************************************************************************************************************************************
 
@@ -101,9 +107,11 @@ func init() {
 		fmt.Println(err)
 	}
 	_, err = stmtAgent.Exec()
-	fmt.Println("[+] Succesfully created Agent table")
+
 	if strings.Contains(err.Error(), "Error 1050") {
 		fmt.Println("[!] Agents table already exists, skipping...")
+	} else {
+		fmt.Println("[+] Succesfully created Agent table")
 	}
 	// **************************************************************************************************************************************************************************************************************************************
 
@@ -112,8 +120,8 @@ func init() {
 	//defer Db.Close()
 }
 
-// InsertImages is a function to help insert image options into the database
-func InsertImages(command, baseimage, newfilename string) {
+// InsertClientID is a function that just puts the client-id into the table for others to grab
+func InsertClientID(clientID string) {
 
 	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
 	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
@@ -126,13 +134,61 @@ func InsertImages(command, baseimage, newfilename string) {
 		fmt.Println(err.Error())
 	}
 
-	insert, err := Db.Prepare("INSERT INTO Pictures (command, baseimage, new_filename) VALUES ( ?, ?, ? )")
+	insert, err := Db.Prepare("INSERT IGNORE INTO Pictures (clientID) VALUES(?)")
+	if err != nil {
+		fmt.Println(err)
+	}
+	insert.Exec(clientID)
+
+}
+
+// GetClientID is a function that just puts the client-id into the table for others to grab
+func GetClientID() (clientid string) {
+
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	blah, _ := Db.Query("SELECT clientID FROM Pictures WHERE ID=1")
+	defer blah.Close()
+	for blah.Next() {
+		err := blah.Scan(&clientid)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+	}
+	return clientid
+}
+
+// InsertImages is a function to help insert image options into the database
+func InsertImages(clientid, command, baseimage, newfilename string) {
+
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	insert, err := Db.Prepare("INSERT IGNORE INTO Pictures (clientID, command, baseimage, new_filename) VALUES ( ?, ?, ?, ? )")
 	if err != nil {
 		fmt.Println(err)
 	}
 	defer insert.Close()
 
-	insert.Exec(command, baseimage, newfilename)
+	insert.Exec(clientid, command, baseimage, newfilename)
 }
 
 // InsertAlbum is a function that will insert the data from the album module into the database
