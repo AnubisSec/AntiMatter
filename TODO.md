@@ -1,25 +1,25 @@
 # TODO:
 
-// Error handling []
+Error handling []
 
-// Display walkthroughs for each module [√]
-// Fix the tasking module since I commented out the upload function []
-// Set up mysql and configure it for multiple agent handlings []
+Display walkthroughs for each module [√]
+Fix the tasking module since I commented out the upload function []
+Set up mysql and configure it for multiple agent handlings []
 
-// Error handling for existing tables and what not [√]
-// Set up tasking module / Database []
-// Fix some of the verbiage on the modules so that it makes a bit more sense []
-// Maybe some autocomplete and up arrow stuff []
-// Add the ability to upload to other albums []
-// Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
-// 		--> Eh, I think this is fine, I'll try and see what others think
+Error handling for existing tables and what not [√]
+Set up tasking module / Database []
+Fix some of the verbiage on the modules so that it makes a bit more sense []
+Maybe some autocomplete and up arrow stuff []
+Add the ability to upload to other albums []
+Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
+		--> Eh, I think this is fine, I'll try and see what others think
 
-// Thoughts right now is to have a target upload an encoded image after getting tasking, just not sure if the agent definition should be on response or on tasking
+Thoughts right now is to have a target upload an encoded image after getting tasking, just not sure if the agent definition should be on response or on tasking
 
-// How this should work:
-// Set up a tasking image for a client -> client grabs it, runs it, uploads new(?) image based on description -> server (C2) is keeping track of each agent and checking for responses (New album for each agent/tasking)
+How this should work:
+Set up a tasking image for a client -> client grabs it, runs it, uploads new(?) image based on description -> server (C2) is keeping track of each agent and checking for responses (New album for each agent/tasking)
 
-/*
+
  My thought right now is that this will look for any descriptions that mention the word "response"
  For right now, and then maybe get a big dict of words that will mean specific things
 
