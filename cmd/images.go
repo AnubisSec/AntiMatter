@@ -28,7 +28,8 @@ func CreateImage(command string, origPic string, newPic string) {
 	if err != nil {
 		fmt.Printf("Error encoding file %v", err)
 	} else {
-		fmt.Println(color.GreenString("\n[+]"), "Success creating encoded image!\n")
+		fmt.Println(color.GreenString("\n[+]"), "Success creating encoded image!")
+		fmt.Println(" ")
 
 	}
 
@@ -78,7 +79,8 @@ func UploadImage(imageFile string, title string, album string, description strin
 	deleteHash = newMap["deletehash"]
 
 	fmt.Println(color.GreenString("[+] Tasking upload success!"))
-	fmt.Println(color.GreenString("\nTask Image ID is:"), imageID, "|", color.GreenString("Task Image DeleteHash is:"), deleteHash, "\n")
+	fmt.Println(color.GreenString("\nTask Image ID is:"), imageID, "|", color.GreenString("Task Image DeleteHash is:"), deleteHash)
+	fmt.Println(" ")
 
 	return imageID, deleteHash
 

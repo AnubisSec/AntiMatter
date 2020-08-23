@@ -23,7 +23,7 @@ type AlbumImages struct {
 	ImageLink   string `json:"link"`
 }
 
-// createAlbum queries the Imgur API in order to create an anonymous album, using a client ID
+// CreateAlbum queries the Imgur API in order to create an anonymous album, using a client ID
 func CreateAlbum(title string, clientID string) (albumID, deleteHash interface{}) {
 
 	apiURL := "https://api.imgur.com"
@@ -53,13 +53,16 @@ func CreateAlbum(title string, clientID string) (albumID, deleteHash interface{}
 	deleteHash = newMap["deletehash"]
 
 	fmt.Println(color.GreenString("\n[+]"), "Successfully created an album with the following values:")
-	fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("Album DeleteHash:"), deleteHash, "\n")
+	fmt.Println(color.GreenString("albumID:"), albumID, color.GreenString("Album DeleteHash:"), deleteHash)
+	fmt.Println(" ")
 
 	return albumID, deleteHash
 
 }
 
+// GetAlbumImages is a function that supposed to retrieve response images
 func GetAlbumImages(albumID string, clientID string) (imageLink interface{}) {
+
 	// This hash is the albumID hash
 	url := "https://api.imgur.com/3/album/" + albumID + "/images"
 	method := "GET"
@@ -101,7 +104,6 @@ func GetAlbumImages(albumID string, clientID string) (imageLink interface{}) {
 	}
 
 	link := v.Field(3).Interface()
-	//fmt.Printf("%+v\n", content)
 
 	return link
 
