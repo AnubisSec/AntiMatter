@@ -24,7 +24,7 @@ func init() {
 		fmt.Println("[-] Unable to connect to MySQL instance, exiting...")
 		os.Exit(1)
 	} else {
-		fmt.Println("[+] Connected to MySQL instance successfully")
+		fmt.Println(color.GreenString("[+]"), "Connected to MySQL instance successfully")
 	}
 
 	_, err = Db.Exec("CREATE DATABASE Anti")
@@ -40,7 +40,7 @@ func init() {
 		fmt.Println("[-] Unable to use database, exiting...")
 		os.Exit(1)
 	} else {
-		fmt.Println("[+] DB selected Successfully")
+		fmt.Println(color.GreenString("[+]"), "DB selected Successfully")
 	}
 
 	fmt.Println("[*] Creating tables now...")
@@ -57,10 +57,12 @@ func init() {
 
 	_, err = stmtPic.Exec()
 
-	if strings.Contains(err.Error(), "Error 1050") {
-		fmt.Println("[!] Pictures table already exists, skipping...")
+	if err != nil {
+		if strings.Contains(err.Error(), "Error 1050") {
+			fmt.Println(color.YellowString("[!]"), "Pictures table already exists, skipping...")
+		}
 	} else {
-		fmt.Println("[+] Succesfully created Pictures table")
+		fmt.Println(color.GreenString("[+]"), "Succesfully created Pictures table")
 	}
 	// **************************************************************************************************************************************************************************************************************************************
 
@@ -74,10 +76,12 @@ func init() {
 	}
 	_, err = stmtAlbum.Exec()
 
-	if strings.Contains(err.Error(), "Error 1050") {
-		fmt.Println("[!] Albums table already exists, skipping...")
+	if err != nil {
+		if strings.Contains(err.Error(), "Error 1050") {
+			fmt.Println(color.YellowString("[!]"), "Albums table already exists, skipping...")
+		}
 	} else {
-		fmt.Println("[+] Succesfully created Albums table")
+		fmt.Println(color.GreenString("[+]"), "Succesfully created Albums table")
 	}
 	// **************************************************************************************************************************************************************************************************************************************
 
@@ -85,17 +89,21 @@ func init() {
 
 	// **************************************************************************************************************************************************************************************************************************************
 	// Tasking table
-	stmtTask, err := Db.Prepare("CREATE TABLE Tasking (Tasking_Image VARCHAR(255), Tasking_Command VARCHAR(255), Response TEXT, Title VARCHAR(255), Tags VARCHAR(255), Agent VARCHAR(255), Image_Hash VARCHAR(255), Delete_Hash VARCHAR(255));")
+
+	// Removed: Response TEXT, Agent VARCHAR(255), Image_Hash VARCHAR(255),
+	stmtTask, err := Db.Prepare("CREATE TABLE Tasking (Tasking_Image VARCHAR(255), Tasking_Command VARCHAR(255), Title VARCHAR(255), Tags VARCHAR(255), Delete_Hash VARCHAR(255));")
 	if err != nil {
 		fmt.Println(err)
 	}
 	_, err = stmtTask.Exec()
-
-	if strings.Contains(err.Error(), "Error 1050") {
-		fmt.Println("[!] Tasking table already exists, skipping...")
+	if err != nil {
+		if strings.Contains(err.Error(), "Error 1050") {
+			fmt.Println(color.YellowString("[!]"), "Tasking table already exists, skipping...")
+		}
 	} else {
-		fmt.Println("[+] Succesfully created Tasking table")
+		fmt.Println(color.GreenString("[+]"), "Succesfully created Tasking table")
 	}
+
 	// **************************************************************************************************************************************************************************************************************************************
 
 	time.Sleep(1 * time.Second)
@@ -108,16 +116,16 @@ func init() {
 	}
 	_, err = stmtAgent.Exec()
 
-	if strings.Contains(err.Error(), "Error 1050") {
-		fmt.Println("[!] Agents table already exists, skipping...")
+	if err != nil {
+		if strings.Contains(err.Error(), "Error 1050") {
+			fmt.Println(color.YellowString("[!]"), "Agents table already exists, skipping...")
+		}
 	} else {
-		fmt.Println("[+] Succesfully created Agent table")
+		fmt.Println(color.GreenString("[+]"), "Succesfully created Agents table")
 	}
 	// **************************************************************************************************************************************************************************************************************************************
 
-	fmt.Println("[+] Successfully created all the tables")
-
-	//defer Db.Close()
+	fmt.Println(color.GreenString("[+]"), "Successfully created all the tables")
 }
 
 // InsertClientID is a function that just puts the client-id into the table for others to grab

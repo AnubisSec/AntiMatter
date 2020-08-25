@@ -38,10 +38,10 @@ func validateOptions(slice []string, val string) bool {
 var imageOptions = map[string]string{"Command": "", "BaseImage": "", "NewFilename": "", "ClientID": ""}
 
 // Global map for the Album module
-var albumOptions = map[string]string{"Title": "", "Client-ID": "", "AlbumID": "", "Album Delete-Hash": ""}
+var albumOptions = map[string]string{"Title": "", "Client-ID": ""} // Removed: , "AlbumID": "", "Album Delete-Hash": ""
 
 // Global map for the Task module
-var taskOptions = map[string]string{"TaskingImageRaw": "", "TaskingImage": "", "Title": "", "DeleteHash": "", "Description": "", "ClientID": ""}
+var taskOptions = map[string]string{"TaskingImageRaw": "", "Title": "", "Description": "", "ClientID": ""} // Removed: "DeleteHash": "", "TaskingImage": "",
 
 // Global map for the Response module
 var responseOptions = map[string]string{"AlbumID": "", "ClientID": ""}
@@ -99,7 +99,7 @@ func main() {
 
 		if strings.EqualFold(result, "options") {
 			fmt.Println("")
-			fmt.Println(color.YellowString("[ Valid Commands ]	[ Description ]"))
+			fmt.Println(color.HiYellowString("[ Valid Commands ]	[ Description ]"))
 			fmt.Println("------------------      ---------------") // Literally just aethetic
 			fmt.Println(" ")
 			fmt.Println(" Image			Create an Image for agent tasking")
@@ -111,7 +111,7 @@ func main() {
 			fmt.Println(" Init			Have the server walk you through filling in the options you need")
 			fmt.Println(" Exit			Exit program")
 			fmt.Println(" ")
-			fmt.Println(color.YellowString("[ The order these should be run in ] "))
+			fmt.Println(color.HiYellowString("[ The order these should be run in ] "))
 			fmt.Println("------------------------------------") // Literally just aethetic
 
 			fmt.Println(" ")
@@ -190,6 +190,12 @@ func main() {
 			}
 		}
 
+		// Alright, this is it...lol
+		// This will be the module that will manage agents
+		// When an album is created, it will create a new agent ID
+
+		// First, let's check that this tracks all albums made...okay it does, great
+
 		if strings.EqualFold(result, "Album") {
 			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
 			if internal.GetClientID() != "" {
@@ -264,7 +270,16 @@ func main() {
 
 		}
 
+		// I have to figure out this part...
+		// we have to figure out how to task a particular album...send an image to an ID with a particular description
+		// Number 1: Either start a new tasking, or choose to task a particular agent
+		// Number 2: When you create an album, it creates a "Waiting status" of a new Task, and then when a client checks in it could change the status in the tasking, and then init a new Agent????? <- Prototype this...
+
 		if strings.EqualFold(result, "Task") {
+			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
+			if internal.GetClientID() != "" {
+				taskOptions["Client-ID"] = internal.GetClientID()
+			}
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
@@ -361,13 +376,12 @@ func main() {
 					}
 					sort.Strings(tmp)
 
-					// DeleteHash == 15 bytes long
-					// ImageID == 7 bytes long
-
 					// Check the lengths to appropriately label values
 					for _, items := range tmp {
+						// DeleteHash == 15 bytes long
 						if len(items) == 15 {
 							fmt.Println(color.GreenString("[+]"), "Image Delete Hash is:", items)
+							// ImageID == 7 bytes long
 						} else if len(items) == 7 {
 							fmt.Println(color.GreenString("[+]"), "Image ID is:", items)
 						}

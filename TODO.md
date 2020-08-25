@@ -1,18 +1,28 @@
 # TODO:
 
 Error handling []
-
-Display walkthroughs for each module [√]
-Fix the tasking module since I commented out the upload function []
 Set up mysql and configure it for multiple agent handlings []
-
-Error handling for existing tables and what not [√]
 Set up tasking module / Database []
 Fix some of the verbiage on the modules so that it makes a bit more sense []
 Maybe some autocomplete and up arrow stuff []
 Add the ability to upload to other albums []
+
 Change all the options so that when you type "options" and the value exists, it queries the database and not the global maps []
 		--> Eh, I think this is fine, I'll try and see what others think
+
+
+
+# DONE:
+Display walkthroughs for each module [√]
+Fix the tasking module since I commented out the upload function [√]
+Error handling for existing tables and what not [√]
+
+
+
+
+
+
+
 
 Thoughts right now is to have a target upload an encoded image after getting tasking, just not sure if the agent definition should be on response or on tasking
 
