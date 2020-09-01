@@ -49,7 +49,7 @@ func init() {
 
 	// **************************************************************************************************************************************************************************************************************************************
 	// Pictures Table
-	stmtPic, err := Db.Prepare("CREATE TABLE Pictures (ID INT AUTO_INCREMENT PRIMARY KEY,  command VARCHAR(1000), clientID VARCHAR(255), baseimage VARCHAR(255), new_filename VARCHAR(255), album_id VARCHAR(255), album_deletehash VARCHAR(255));")
+	stmtPic, err := Db.Prepare("CREATE TABLE Pictures (ID INT AUTO_INCREMENT PRIMARY KEY,  command VARCHAR(1000), clientID VARCHAR(255), baseimage VARCHAR(255), new_filename VARCHAR(255));") // Removed: , album_id VARCHAR(255), album_deletehash VARCHAR(255)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -70,7 +70,7 @@ func init() {
 
 	// **************************************************************************************************************************************************************************************************************************************
 	// Albums table
-	stmtAlbum, err := Db.Prepare("CREATE TABLE Albums (ID INT AUTO_INCREMENT PRIMARY KEY, Album_Hash VARCHAR(255), Delete_Hash VARCHAR(255), Auth_Type VARCHAR(255), Token VARCHAR(255));")
+	stmtAlbum, err := Db.Prepare("CREATE TABLE Albums(ID INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), AlbumID VARCHAR(255), DeleteHash VARCHAR(255));")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -110,7 +110,7 @@ func init() {
 
 	// **************************************************************************************************************************************************************************************************************************************
 	// Agent table
-	stmtAgent, err := Db.Prepare("CREATE TABLE Agents (ID INT AUTO_INCREMENT PRIMARY KEY, Status VARCHAR(255), Title VARCHAR(255), Tags VARCHAR(255));")
+	stmtAgent, err := Db.Prepare("CREATE TABLE Agents (ID INT AUTO_INCREMENT PRIMARY KEY, Status VARCHAR(255), Title VARCHAR(255));") // Removed: , Tags VARCHAR(255)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -246,6 +246,29 @@ func InsertTask(taskingimage, title, description, imageID, deleteHash string) {
 
 }
 
+// CreateAgent is a function that will create an agent when an album is created
+func CreateAgent(title string) {
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	insert, err := Db.Prepare("INSERT INTO Agents (Title, Status) VALUES( ?, ? )")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer insert.Close()
+
+	insert.Exec(title, "PENDING")
+
+}
+
 // GetImages is a function that will query the database for the current images that are encoded
 func GetImages() {
 
@@ -323,6 +346,41 @@ func GetAlbums() {
 	err = rows.Err()
 	if err != nil {
 		fmt.Println(err)
+	}
+
+}
+
+// GetTaskings is a function that will query the database for any recent taskings and their status
+func GetTaskings() {
+
+	var (
+		id     int
+		title  string
+		status string
+	)
+
+	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	rows, err := Db.Query("SELECT ID, Status, Title FROM Agents")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&id, &title, &status)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("|", color.GreenString("ID:"), id, "|", color.GreenString("Title:"), status, "|", color.GreenString("Status:"), title, "|")
 	}
 
 }
