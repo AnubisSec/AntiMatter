@@ -5,10 +5,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
+	//"io"
 	"io/ioutil"
 	"log"
-	"net/http"
+	//"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -376,7 +376,8 @@ func main() {
 					internal.GetAlbums()
 					fmt.Println(" ")
 
-					fmt.Println("[?] Which album would you like to task (Choose delete-hash)?")
+					fmt.Println(color.YellowString("[?]"), "Which album would you like to task (Choose delete-hash)?")
+					fmt.Println(" ")
 
 					scanner.Scan()
 					taskAlbum := scanner.Text()
@@ -392,7 +393,7 @@ func main() {
 				} else if strings.Contains(text, "exit") {
 					break
 				} else if strings.Contains(text, "list") {
-					values := imgurItems.Values() // Grabs values in random order
+					values := imgurItems.Values()
 
 					// Workaround to make sure we grab values in a sorted order every time
 					tmp := make([]string, len(values))
@@ -431,13 +432,9 @@ func main() {
 				color.Set(color.FgGreen)
 				fmt.Print("AntiMatter/Response >> ")
 				color.Unset()
-				// Had to do this since case sensitivity is dumb in golang
-				initialText, _ := reader.ReadString('\n')
-				text := strings.ToLower(initialText)
 
-				if val, ok := albumOptions["AlbumID"]; ok {
-					responseOptions["AlbumID"] = val
-				}
+				// Had to change this from the case-insensitive one since the album-id is indeed, case-sensitive
+				text, _ := reader.ReadString('\n')
 
 				if val, ok := albumOptions["Client-ID"]; ok {
 					responseOptions["ClientID"] = val
@@ -469,36 +466,40 @@ func main() {
 					albumID := responseOptions["AlbumID"]
 					clientID := responseOptions["ClientID"]
 
-					linkImage := cmd.GetAlbumImages(albumID, clientID)
+					cmd.GetAlbumImages(albumID, clientID)
 
-					response, e := http.Get(linkImage.(string))
-					if e != nil {
-						log.Print(e)
-					}
-					defer response.Body.Close()
+					// This is really just to check images for commands, but this will be for a different part
 
-					// open a file for writing
-					// Should probably have the user define what and where to call this
-					file, err := os.Create("/tmp/asdf.jpg")
-					if err != nil {
-						log.Print(err)
-					}
-					defer file.Close()
+					/*
+						response, e := http.Get(linkImage.(string))
+						if e != nil {
+							log.Print(e)
+						}
+						defer response.Body.Close()
 
-					// Use io.Copy to just dump the response body to the file. This supports huge files
-					_, err = io.Copy(file, response.Body)
-					if err != nil {
-						log.Print(err)
-					}
-					fmt.Println("Get response: Success!")
-					fmt.Println(" ")
+						// open a file for writing
+						// Should probably have the user define what and where to call this
+						file, err := os.Create("/tmp/asdf.jpg")
+						if err != nil {
+							log.Print(err)
+						}
+						defer file.Close()
 
-					fmt.Println(color.GreenString("Response") + ":")
-					fmt.Println(" ")
+						// Use io.Copy to just dump the response body to the file. This supports huge files
+						_, err = io.Copy(file, response.Body)
+						if err != nil {
+							log.Print(err)
+						}
+						fmt.Println("Get response: Success!")
+						fmt.Println(" ")
 
-					cmd.DecodeImage()
+						fmt.Println(color.GreenString("Response") + ":")
+						fmt.Println(" ")
 
-					fmt.Println(" ")
+						cmd.DecodeImage()
+
+						fmt.Println(" ")
+					*/
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -615,6 +616,7 @@ func main() {
 				color.Set(color.FgGreen)
 				fmt.Print("AntiMatter/List >> ")
 				color.Unset()
+
 				// Had to do this since case sensitivity is dumb in golang
 				initialText, _ := reader.ReadString('\n')
 				text := strings.ToLower(initialText)
