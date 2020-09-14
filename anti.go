@@ -41,7 +41,7 @@ var imageOptions = map[string]string{"Command": "", "BaseImage": "", "NewFilenam
 var albumOptions = map[string]string{"Title": "", "Client-ID": ""} // Removed: , "AlbumID": "", "Album Delete-Hash": ""
 
 // Global map for the Task module
-var taskOptions = map[string]string{"TaskingImageRaw": "", "Title": "", "Description": "", "ClientID": ""} // Removed: "DeleteHash": "", "TaskingImage": "",
+var taskOptions = map[string]string{"TaskingImageRaw": "", "Title": "", "Description": "", "ClientID": "", "AlbumID": ""} // Removed: "DeleteHash": "", "TaskingImage": "",
 
 // Global map for the Response module
 var responseOptions = map[string]string{"AlbumID": "", "ClientID": ""}
@@ -288,8 +288,10 @@ func main() {
 				fmt.Print("AntiMatter/Task >> ")
 				color.Unset()
 				// Had to do this since case sensitivity is dumb in golang
-				initialText, _ := reader.ReadString('\n')
-				text := strings.ToLower(initialText)
+				//initialText, _ := reader.ReadString('\n')
+
+				// Had to change this from the case-insensitive one since the album-id is indeed, case-sensitive
+				text, _ := reader.ReadString('\n')
 
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println(" ")
@@ -298,10 +300,6 @@ func main() {
 					// Check to see if this value was set in the Image module
 					if val, ok := imageOptions["ClientID"]; ok {
 						taskOptions["ClientID"] = val
-					}
-					// Check to see if this value was set in the Album module (it should have been, add error handling if not)
-					if val, ok := albumOptions["Delete-Hash"]; ok {
-						taskOptions["DeleteHash"] = val
 					}
 
 					for key, value := range taskOptions {
@@ -343,10 +341,6 @@ func main() {
 						encoded := base64.StdEncoding.EncodeToString(content)
 						taskOptions["TaskingImage"] = encoded
 
-					} else if strings.Contains(text, "delete-hash") {
-						deleteHash := strings.Split(text, "delete-hash ")
-						taskOptions["DeleteHash"] = strings.Replace(strings.Join(deleteHash[1:], ""), "\n", "", -1)
-
 					} else if strings.Contains(text, "description") {
 						taskDescrip := strings.Split(text, "description ")
 						taskOptions["Description"] = strings.Replace(strings.Join(taskDescrip[1:], ""), "\n", "", -1)
@@ -355,6 +349,9 @@ func main() {
 						clientID := strings.Split(text, "client-id ")
 						taskOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
 
+					} else if strings.Contains(text, "album-id") {
+						albumID := strings.Split(text, "album-id ")
+						taskOptions["AlbumID"] = strings.Replace(strings.Join(albumID[1:], ""), "\n", "", -1)
 					}
 
 				} else if strings.Contains(text, "go") {
@@ -467,39 +464,6 @@ func main() {
 					clientID := responseOptions["ClientID"]
 
 					cmd.GetAlbumImages(albumID, clientID)
-
-					// This is really just to check images for commands, but this will be for a different part
-
-					/*
-						response, e := http.Get(linkImage.(string))
-						if e != nil {
-							log.Print(e)
-						}
-						defer response.Body.Close()
-
-						// open a file for writing
-						// Should probably have the user define what and where to call this
-						file, err := os.Create("/tmp/asdf.jpg")
-						if err != nil {
-							log.Print(err)
-						}
-						defer file.Close()
-
-						// Use io.Copy to just dump the response body to the file. This supports huge files
-						_, err = io.Copy(file, response.Body)
-						if err != nil {
-							log.Print(err)
-						}
-						fmt.Println("Get response: Success!")
-						fmt.Println(" ")
-
-						fmt.Println(color.GreenString("Response") + ":")
-						fmt.Println(" ")
-
-						cmd.DecodeImage()
-
-						fmt.Println(" ")
-					*/
 
 				} else if strings.Contains(text, "exit") {
 					break

