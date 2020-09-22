@@ -72,7 +72,7 @@ func CreateAlbum(title string, clientID string) (albumID, deleteHash interface{}
 func GetAlbumImages(albumID string, clientID string) { // removed: (imageLink interface{})
 
 	// This hash is the albumID hash
-	url := "https://api.imgur.com/3/album/" + albumID + "/images"
+	url := "https://api.imgur.com/3/album/" + albumID + "/images.json"
 	method := "GET"
 
 	payload := &bytes.Buffer{}

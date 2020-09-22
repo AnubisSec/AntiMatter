@@ -367,7 +367,6 @@ func main() {
 					imageID, deletehash := cmd.UploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
 
 					// Confirmed that this actually does add to the album
-					scanner := bufio.NewScanner(os.Stdin)
 					fmt.Println(" ")
 					fmt.Println(color.YellowString("===[ ALBUMS ]==="))
 					internal.GetAlbums()
@@ -376,8 +375,12 @@ func main() {
 					fmt.Println(color.YellowString("[?]"), "Which album would you like to task (Choose delete-hash)?")
 					fmt.Println(" ")
 
-					scanner.Scan()
-					taskAlbum := scanner.Text()
+					reader := bufio.NewReader(os.Stdin)
+					taskAlbum, err := reader.ReadString('\n')
+					if err != nil {
+						fmt.Println(err)
+					}
+					taskAlbum = strings.TrimSuffix(taskAlbum, "\n")
 
 					// AddImage() actaully adds the image to a particular album
 					cmd.AddImage(taskAlbum, imageOptions["ClientID"], deletehash.(string))

