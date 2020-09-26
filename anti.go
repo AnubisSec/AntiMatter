@@ -5,10 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	//"io"
 	"io/ioutil"
 	"log"
-	//"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -66,7 +64,6 @@ func main() {
 	for {
 		options := []string{"Options", "Image", "Album", "Agent", "Task", "List", "Delete", "Response", "Init", "Quit", "Exit"}
 		validate := func(input string) error {
-			// _, err := strconv.ParseFloat(input, 64)
 			found := validateOptions(options, input)
 
 			if !found {
@@ -190,13 +187,6 @@ func main() {
 			}
 		}
 
-		// Alright, this is it...lol
-		// This will be the module that will manage agents
-		// When an album is created, it will create a new agent ID
-
-		// First, let's check that this tracks all albums made...okay it does, great
-		// Second, might need to add a status here...or maybe create a new status and assign an agent to an album...done (sort of)
-		// Third, I need to emulate a user checking in...
 		if strings.EqualFold(result, "Album") {
 			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
 			if internal.GetClientID() != "" {
@@ -271,11 +261,6 @@ func main() {
 
 		}
 
-		// I have to figure out this part...
-		// I have to figure out how to task a particular album...send an image to an ID with a particular description
-		// Number 1: Either start a new tasking, or choose to task a particular agent
-		// Number 2: When you create an album, it creates a "Waiting status" of a new Task, and then when a client checks in it could change the status in the tasking, and then init a new Agent????? <- Prototype this...
-
 		// Album module creates ID -> ...
 		if strings.EqualFold(result, "Task") {
 			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
@@ -287,8 +272,6 @@ func main() {
 				color.Set(color.FgGreen)
 				fmt.Print("AntiMatter/Task >> ")
 				color.Unset()
-				// Had to do this since case sensitivity is dumb in golang
-				//initialText, _ := reader.ReadString('\n')
 
 				// Had to change this from the case-insensitive one since the album-id is indeed, case-sensitive
 				text, _ := reader.ReadString('\n')
@@ -355,13 +338,6 @@ func main() {
 					}
 
 				} else if strings.Contains(text, "go") {
-					// This needs to be updated...
-
-					// What needs to happen is to supply a created album to upload / "task" to
-					// Maybe ask the user "Hey, what album would you like to task?" and show it the list of albums?
-					// Then have the user add it to that album, I still need to make a fake agent
-
-					// I just managed to get a working PoC of grabbing mulitple images from an album: get_album_images.go
 
 					// UploadImage() sends image to public gallery, since it's needs to be up in the public gallery to be added to a specific album
 					imageID, deletehash := cmd.UploadImage(taskOptions["TaskingImage"], taskOptions["Title"], taskOptions["AlbumID"], taskOptions["Description"], taskOptions["ClientID"])
@@ -383,7 +359,9 @@ func main() {
 					taskAlbum = strings.TrimSuffix(taskAlbum, "\n")
 
 					// AddImage() actaully adds the image to a particular album
-					cmd.AddImage(taskAlbum, imageOptions["ClientID"], deletehash.(string))
+					success, status := cmd.AddImage(taskAlbum, imageOptions["ClientID"], deletehash.(string))
+					// Adding this to see if the tasking image actually went through or not
+					fmt.Println(success, status)
 
 					// I truly don't know the value of these, why did I add this?
 					// It returns the imageid and hash of the public images.../shrug
@@ -421,12 +399,11 @@ func main() {
 
 		}
 
-		// This currently fills in the most recent album id, which would contain the image we upload
-		// Realisticly this would check any album of any response
-		// Also would need it to need to know difference between respone and taksing
-		// This could be different description words
-
 		if strings.EqualFold(result, "Response") {
+			if internal.GetClientID() != "" {
+				responseOptions["ClientID"] = internal.GetClientID()
+			}
+
 			for {
 				reader := bufio.NewReader(os.Stdin)
 				color.Set(color.FgGreen)
@@ -436,10 +413,8 @@ func main() {
 				// Had to change this from the case-insensitive one since the album-id is indeed, case-sensitive
 				text, _ := reader.ReadString('\n')
 
-				if val, ok := albumOptions["Client-ID"]; ok {
-					responseOptions["ClientID"] = val
-
-				}
+				//				if val, ok := albumOptions["Client-ID"]; ok {
+				//				responseOptions["ClientID"] = val
 
 				if strings.TrimRight(text, "\n") == "options" {
 					fmt.Println(" ")
@@ -460,13 +435,25 @@ func main() {
 					if strings.Contains(text, "album-id") {
 						albumid := strings.Split(text, "album-id ")
 						responseOptions["AlbumID"] = strings.Replace(strings.Join(albumid[1:], ""), "\n", "", -1)
+
+					} else if strings.Contains(text, "client-id") {
+						clientID := strings.Split(text, "client-id ")
+						responseOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
 					}
 
 				} else if strings.Contains(text, "check") {
 					albumID := responseOptions["AlbumID"]
 					clientID := responseOptions["ClientID"]
 
-					cmd.GetAlbumImages(albumID, clientID)
+					//TODO: Need to add error handling if there isn't an album/images
+					imageLink := cmd.GetResponseImages(albumID, clientID)
+					cmd.GrabResponseImage(imageLink)
+					hash := internal.GetAlbums()
+					if cmd.YesNo() == true {
+						fmt.Println(color.RedString("DELETING ALBUM NOW"))
+						cmd.DeleteAlbum(hash, responseOptions["ClientID"])
+
+					}
 
 				} else if strings.Contains(text, "exit") {
 					break
@@ -576,7 +563,6 @@ func main() {
 			*/
 		}
 
-		//TODO:
 		if strings.EqualFold(result, "List") {
 			for {
 				reader := bufio.NewReader(os.Stdin)

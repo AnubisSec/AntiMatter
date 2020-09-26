@@ -14,6 +14,8 @@ import (
 	"github.com/fatih/color"
 )
 
+var responseURL string
+
 // AlbumImages is struct that holds data structs for GetAlbumImages()
 type AlbumImages struct {
 	Data []struct {
@@ -69,7 +71,7 @@ func CreateAlbum(title string, clientID string) (albumID, deleteHash interface{}
 }
 
 // GetAlbumImages is a function that supposed to retrieve response images
-func GetAlbumImages(albumID string, clientID string) { // removed: (imageLink interface{})
+func GetResponseImages(albumID string, clientID string) (imageLink string) { // removed: (imageLink interface{})
 
 	// This hash is the albumID hash
 	url := "https://api.imgur.com/3/album/" + albumID + "/images.json"
@@ -107,15 +109,22 @@ func GetAlbumImages(albumID string, clientID string) { // removed: (imageLink in
 	datavalues := results.Data
 	if results.Success == true {
 		for field := range datavalues {
-			fmt.Println("[+] ImageID:", datavalues[field].ID)
-			fmt.Println("[+] ImageTitle:", datavalues[field].Title)
-			fmt.Println("[+] Description:", datavalues[field].Description)
-			fmt.Println("[+] ImageLink:", datavalues[field].Link)
-			fmt.Println(" ")
+			if strings.Contains(datavalues[field].Description, "response") {
+
+				fmt.Println("[+] ImageID:", datavalues[field].ID)
+				fmt.Println("[+] ImageTitle:", datavalues[field].Title)
+				fmt.Println("[+] Description:", datavalues[field].Description)
+				fmt.Println("[+] ImageLink:", datavalues[field].Link)
+				fmt.Println(" ")
+
+				responseURL = datavalues[field].Link
+			}
+
+			//	fmt.Println("[+] Logic worked and got a response from a client: ", datavalues[field].Link)
 		}
 
 	}
-
+	return responseURL
 }
 
 // GetLinkClient is a function is to grab the tasking link for the client
@@ -160,4 +169,32 @@ func GetLinkClient(albumID string, clientID string) (imageLink string) {
 	}
 	return imageLink
 
+}
+
+// DeleteAlbum will delete a given album
+func DeleteAlbum(albumDeleteHash string, clientID string) {
+	url := "https://api.imgur.com/3/album/" + albumDeleteHash
+	method := "DELETE"
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	err := writer.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	req.Header.Add("Authorization", "Client-ID "+clientID)
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+
+	fmt.Println(string(body))
 }

@@ -310,13 +310,13 @@ func GetImages() {
 }
 
 // GetAlbums is a function that will query the database for the current albums that have been created
-func GetAlbums() {
+func GetAlbums() (albumHash string) {
 
 	var (
-		id        int
-		title     string
-		albumID   string
-		albumHash string
+		id      int
+		title   string
+		albumID string
+		//albumHash string
 	)
 
 	// Had the hardest time with this, but forgot to load this connection routine at the beginning of this function
@@ -347,6 +347,7 @@ func GetAlbums() {
 	if err != nil {
 		fmt.Println(err)
 	}
+	return albumHash
 
 }
 

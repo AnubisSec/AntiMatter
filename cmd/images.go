@@ -14,10 +14,13 @@ import (
 	"os"
 	"strings"
 
+	// External Libs
 	stego "github.com/auyer/steganography"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 )
+
+var responseImageMem string
 
 // CreateImage is a function that uses the stego lib to encode an image you define and then write it to a new image
 // if the original pic doesn't exist this will break...hard
@@ -138,10 +141,10 @@ func AddImage(albumDeleteHash string, clientID string, imgDeleteHash string) (su
 
 }
 
-// GetImage is a work in progress lel; it will eventually query the data of a remote image
-func GetImage() bool {
+// YesNo is a work in progress lel; it will eventually query the data of a remote image
+func YesNo() bool {
 	prompt := promptui.Select{
-		Label: "Would you like to upload most recently created image to this album?[Yes/No]",
+		Label: "[!!!] Would you like to delete this album? (Best practice to delete)",
 		Items: []string{"Yes", "No"},
 	}
 	_, result, err := prompt.Run()
@@ -190,8 +193,26 @@ func GrabRandomImage() (imageMem image.Image) {
 
 }
 
-// GetResponse is a function for the tasking module to retrieve response
-//func GetResponse(albumID string, clientID string) (out string) {
-// If ImageTitle contains Response, start decoding, if not ignore
+// GrabRespnseImage returns the image of the response from the client
+func GrabResponseImage(url string) {
 
-//}
+	response, err := http.Get(url)
+	if err != nil {
+		fmt.Println("What ~httpGet~: ", err)
+	}
+	defer response.Body.Close()
+
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	responseImageMem = string(contents)
+
+	fmt.Println(color.GreenString("Response") + ":")
+	fmt.Println(" ")
+
+	output := DecodeImage(contents)
+	fmt.Println(output)
+
+}
