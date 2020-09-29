@@ -195,6 +195,11 @@ func DeleteAlbum(albumDeleteHash string, clientID string) {
 	res, err := client.Do(req)
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if strings.Contains(string(body), "200") {
+		fmt.Println(color.GreenString("[+]"), "Delete was a success")
+	}
 
-	fmt.Println(string(body))
 }

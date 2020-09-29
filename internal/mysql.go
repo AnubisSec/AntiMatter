@@ -385,3 +385,21 @@ func GetTaskings() {
 	}
 
 }
+
+func DeleteAlbum(albumDeleteHash string) {
+	Db, err := sql.Open("mysql", "root:Passw0rd!@tcp(127.0.0.1:3307)/")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	_, err = Db.Exec("USE Anti")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	_, err = Db.Exec(`DELETE FROM Albums WHERE DeleteHash=?;`, albumDeleteHash)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+}

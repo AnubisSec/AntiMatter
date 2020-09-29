@@ -261,7 +261,8 @@ func main() {
 
 		}
 
-		// Album module creates ID -> ...
+		// TODO: Add cli for selecting delete-hash to upload to
+		// TODO: Ability to set client-id in this module
 		if strings.EqualFold(result, "Task") {
 			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
 			if internal.GetClientID() != "" {
@@ -348,10 +349,11 @@ func main() {
 					internal.GetAlbums()
 					fmt.Println(" ")
 
-					fmt.Println(color.YellowString("[?]"), "Which album would you like to task (Choose delete-hash)?")
-					fmt.Println(" ")
+					//					fmt.Println(color.YellowString("[?]"), "Which album would you like to task (Choose delete-hash)?")
+					//					fmt.Println(" ")
 
 					reader := bufio.NewReader(os.Stdin)
+					fmt.Print(color.YellowString("[?]"), "Which album would you like to task (Choose delete-hash)? >> ")
 					taskAlbum, err := reader.ReadString('\n')
 					if err != nil {
 						fmt.Println(err)
@@ -359,9 +361,13 @@ func main() {
 					taskAlbum = strings.TrimSuffix(taskAlbum, "\n")
 
 					// AddImage() actaully adds the image to a particular album
-					success, status := cmd.AddImage(taskAlbum, imageOptions["ClientID"], deletehash.(string))
+					success, _ := cmd.AddImage(taskAlbum, imageOptions["ClientID"], deletehash.(string))
+					// Had to add this because you can't use an interface for strings.Contains
+					response := fmt.Sprintf("%v", success)
 					// Adding this to see if the tasking image actually went through or not
-					fmt.Println(success, status)
+					if strings.Contains(response, "true") {
+						fmt.Println(color.GreenString("[+]"), "Uploaded tasking successfully!")
+					}
 
 					// I truly don't know the value of these, why did I add this?
 					// It returns the imageid and hash of the public images.../shrug
@@ -441,17 +447,24 @@ func main() {
 						responseOptions["ClientID"] = strings.Replace(strings.Join(clientID[1:], ""), "\n", "", -1)
 					}
 
+					// TODO: Need error handling if album-id isn't set, it will break
 				} else if strings.Contains(text, "check") {
 					albumID := responseOptions["AlbumID"]
 					clientID := responseOptions["ClientID"]
 
 					//TODO: Need to add error handling if there isn't an album/images
 					imageLink := cmd.GetResponseImages(albumID, clientID)
+					// So a weird thing happens where I think the imageLink is still holding a value so when you run check if the album is
+					// deleted, it will still show the response but the album doesn't exist, maybe I should try and grab this value and
+					// delete the image?
 					cmd.GrabResponseImage(imageLink)
 					hash := internal.GetAlbums()
 					if cmd.YesNo() == true {
 						fmt.Println(color.RedString("DELETING ALBUM NOW"))
+						fmt.Println("This will take ~60 seconds to fully delete...")
 						cmd.DeleteAlbum(hash, responseOptions["ClientID"])
+
+						internal.DeleteAlbum(hash)
 
 					}
 

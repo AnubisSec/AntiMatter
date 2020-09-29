@@ -30,14 +30,7 @@ var imageMem string
 
 /*
 TODO:
-- Client needs to be configured to know what album to grab from
-	- This is probably gonna be done through the description words, how can you preconfigure this??
-- Once you get past the first part, it needs to be able to grab the tasking image from the album
-- Decode it the command
-- Run it
-- Encode the result in a new image
-- And upload a new image into the same album
-
+	Allow to hard code the delete hash to upload response
 
 */
 
