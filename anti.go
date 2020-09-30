@@ -261,7 +261,6 @@ func main() {
 
 		}
 
-		// TODO: Add cli for selecting delete-hash to upload to
 		// TODO: Ability to set client-id in this module
 		if strings.EqualFold(result, "Task") {
 			// I put this here so that it would initialize this value instantly, but idk if this is the perfect spot
@@ -548,32 +547,6 @@ func main() {
 			fmt.Println("[+] All done! Moving on...")
 			time.Sleep(1 * time.Second)
 
-			// **********************************************************************************************************
-			/*
-				// Create Tasking
-				// **********************************************************************************************************
-
-				// Get client-id from user
-				fmt.Print("[~] Provide your Tasking title >> ")
-				scanner.Scan()
-				albumTitle := scanner.Text()
-				albumOptions["Title"] = albumTitle
-
-				// Encode new image
-				fmt.Println("[+] Creating album...")
-				time.Sleep(1 * time.Second)
-				albumID, deletehash := cmd.CreateAlbum(albumOptions["Title"], imageOptions["ClientID"])
-				albumOptions["AlbumID"] = albumID.(string)
-				albumOptions["Album Delete-Hash"] = deletehash.(string)
-
-				fmt.Println("Adding data to the SQL instance...")
-				// Utilizes the mysql stuff, currently have it set up on a Docker test server
-				internal.InsertAlbum(albumOptions["Title"], albumOptions["AlbumID"], albumOptions["Album Delete-Hash"])
-				fmt.Println("[+] All done! Moving on...")
-				time.Sleep(1 * time.Second)
-
-				// **********************************************************************************************************
-			*/
 		}
 
 		if strings.EqualFold(result, "List") {
