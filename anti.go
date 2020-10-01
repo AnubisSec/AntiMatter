@@ -154,7 +154,6 @@ func main() {
 
 				} else if strings.Contains(text, "set") {
 
-					// TODO: If this isn't set it breaks, handle that
 					if strings.Contains(text, "command") {
 						command := strings.Split(text, "command ")
 						imageOptions["Command"] = strings.Replace(strings.Join(command[1:], ""), "\n", "", -1)
@@ -347,9 +346,6 @@ func main() {
 					fmt.Println(color.YellowString("===[ ALBUMS ]==="))
 					internal.GetAlbums()
 					fmt.Println(" ")
-
-					//					fmt.Println(color.YellowString("[?]"), "Which album would you like to task (Choose delete-hash)?")
-					//					fmt.Println(" ")
 
 					reader := bufio.NewReader(os.Stdin)
 					fmt.Print(color.YellowString("[?]"), "Which album would you like to task (Choose delete-hash)? >> ")

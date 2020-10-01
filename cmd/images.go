@@ -25,6 +25,12 @@ var responseImageMem string
 // CreateImage is a function that uses the stego lib to encode an image you define and then write it to a new image
 // if the original pic doesn't exist this will break...hard
 func CreateImage(command string, origPic string, newPic string) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(color.RedString("[!]"), "Panic occurred probably due to BaseImage being null:", err, "\n", color.GreenString("[+]"), "Recovering now...")
+		}
+	}()
+
 	inFile, _ := os.Open(origPic)
 	reader := bufio.NewReader(inFile)
 	img, _ := png.Decode(reader)
@@ -195,6 +201,11 @@ func GrabRandomImage() (imageMem image.Image) {
 
 // GrabRespnseImage returns the image of the response from the client
 func GrabResponseImage(url string) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(color.RedString("[!]"), "Panic occurred: Probably due to albumID being null.  Message: ", err, "\n", color.GreenString("[+]"), "Recovering now...")
+		}
+	}()
 
 	response, err := http.Get(url)
 	if err != nil {
